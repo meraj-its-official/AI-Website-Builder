@@ -5,9 +5,12 @@ import { signInWithPopup } from 'firebase/auth'
 import { auth, provider } from '../authentication/firebase'
 import axios from 'axios'
 import { serverUrl } from '../App'
+import { useDispatch } from 'react-redux'
+import { setUserData } from '../redux/userSlice'
 
 function SignIn({ open, onClose }) {
-
+    const dispatch = useDispatch()
+    if (!open) return null;
     const handelGoogleAuth = async () => {
         try {
             const result = await signInWithPopup(auth, provider)
@@ -16,11 +19,13 @@ function SignIn({ open, onClose }) {
                 email: result.user.email,
                 avatar: result.user.photoURL
             }, { withCredentials: true })
-            console.log(data)
+            dispatch(setUserData(data))
+            onClose();
         } catch (e) {
             console.error("Auth or Backend error:", e);
         }
     }
+
     return (
         <AnimatePresence >
             {open &&

@@ -14,7 +14,7 @@ function Home() {
 
     const [openLogin, setOpenLogin] = useState(false)
     return (
-        <div className="relative max-h-screen bg-[#040404] text-white overflow-hidden">
+        <div className="relative min-h-screen bg-[#040404] text-white overflow-y-auto">
             <Appbar />
             <section className="pt-44 pb-32 px-6 text-center">
                 <motion.h1
