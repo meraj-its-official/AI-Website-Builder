@@ -9,11 +9,11 @@ export const googleAuth = async (req, res) => {
                 message: "email is required"
             })
         }
-        let existingUser = await User.findOne({ email })
-        if (!existingUser) {
-            existingUser = await User.create({ name, email, avatar })
+        let user = await User.findOne({ email })
+        if (!user) {
+            user = await User.create({ name, email, avatar })
         }
-        const token = await jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET,
+        const token = await jwt.sign({ id: user._id }, process.env.JWT_SECRET,
             { expiresIn: "7d" })
 
         res.cookie("token", token, {
@@ -23,7 +23,7 @@ export const googleAuth = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         })
 
-        return res.status(200).json(existingUser)
+        return res.status(200).json(user)
     } catch (e) {
         console.log(e)
         return res.status(500).json({ message: `google auth error ${e}` })

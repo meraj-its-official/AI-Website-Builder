@@ -9,7 +9,7 @@ const isAuth = async (req, res, next) => {
             })
         }
         const decode = await jwt.verify(token, process.env.JWT_SECRET)
-        req.existingUser = await User.findById(decode.id)
+        req.user = await User.findById(decode.id)
         next()
     } catch (e) {
         return res.status(500).json({

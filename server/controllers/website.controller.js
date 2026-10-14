@@ -158,6 +158,10 @@ export const generateWebsite = async (req, res) => {
             return res.status(400).json({ message: "prompt is required" })
         }
 
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+        }
+
         const user = await User.findById(req.user._id)
         if (!user) {
             return res.status(400).json({ message: "user not found" })
@@ -205,7 +209,7 @@ export const generateWebsite = async (req, res) => {
             ]
         })
 
-        user.credits = -50
+        user.credits -= 50
         await user.save()
 
         return res.status(201).json({
