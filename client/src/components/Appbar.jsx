@@ -16,7 +16,9 @@ export const HomeBar = () => {
     const navigate = useNavigate()
     const handleLogOut = async () => {
         try {
-            await axios.get(`${serverUrl}/api/auth/logout`, { withCredentials: true })
+            await axios.get(`${serverUrl}/api/auth/logout`, {
+                withCredentials: true
+            })
             dispatch(setUserData(null))
             setOpenProfile(false)
         } catch (e) {

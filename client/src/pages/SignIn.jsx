@@ -17,7 +17,9 @@ function SignIn({ open, onClose }) {
                 name: result.user.displayName,
                 email: result.user.email,
                 avatar: result.user.photoURL
-            }, { withCredentials: true })
+            }, {
+                withCredentials: true
+            })
             dispatch(setUserData(data))
             onClose();
         } catch (e) {
