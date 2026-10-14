@@ -1,3 +1,8 @@
+import generateResponse from "../config/openRouter.js";
+import { extractJSON } from "../utils/extractJSON.js";
+import Website from '../models/website.model.js'
+import User from "../models/user.model.js";
+
 const masterPrompt = `YOU ARE A PRINCIPAL FRONTEND ARCHITECT
 AND A SENIOR UI/UX ENGINEER
 SPECIALIZED IN RESPONSIVE DESIGN SYSTEMS.
@@ -37,13 +42,13 @@ THIS WEBSITE MUST BE FULLY RESPONSIVE.
 YOU MUST IMPLEMENT:
 
 ✔ Mobile-first CSS approach
-✔ Responsive layout for:
+✔ Responsive layout for:cd
   - Mobile (<768px)
   - Tablet (768px–1024px)
   - Desktop (>1024px)
 
 ✔ Use:
-  - CSS Grid / Flexbox
+  - CSS Grid / FlexBx
   - Relative units (%, rem, vw)
   - Media queries
 
@@ -147,18 +152,70 @@ ABSOLUTE RULES
 
 export const generateWebsite = async (req, res) => {
     try {
+
         const { prompt } = req.body
         if (!prompt) {
             return res.status(400).json({ message: "prompt is required" })
         }
-        const user = req.user
+
+        const user = await User.findById(req.user._id)
         if (!user) {
             return res.status(400).json({ message: "user not found" })
         }
+
+        if (user.credits < 50) {
+            return res.status(400).json({ message: "you have not enough credits to generate a website" })
+        }
+
         const finalPrompt = masterPrompt.replace("USER_PROMPT", prompt)
 
+        let raw = ''
+        let parsed = null
+
+        for (let i = 0; i < 2 && !parsed; i++) {
+            raw = await generateResponse(finalPrompt)
+            parsed = await extractJSON(raw)
+
+            if (!parsed) {
+                raw = await generateResponse(finalPrompt + "\n\nRETURN ONLY RAW JSON.")
+                parsed = await extractJSON(raw)
+            }
+        }
+
+        if (!parsed) {
+            console.log('ai returned invalid response', raw)
+            return res.status(500).json({
+                message: "ai returned invalid response"
+            })
+        }
+
+        const website = await Website.create({
+            user: user._id,
+            title: prompt.slice(0, 70),
+            latestCode: parsed.code,
+            conversation: [
+                {
+                    role: 'ai',
+                    content: parsed.message
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ]
+        })
+
+        user.credits = -50
+        await user.save()
+
+        return res.status(201).json({
+            websiteId: website._id,
+            remainingCredits: user.credits
+        })
 
     } catch (e) {
-
+        return res.status(500).json({
+            message: `Error while generating website ${e}`
+        })
     }
 }

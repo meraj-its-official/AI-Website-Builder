@@ -6,6 +6,7 @@ import authRouter from "./routes/auth.route.js";
 import userRouter from "./routes/user.route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors"
+import websiteRouter from "./routes/website.route.js";
 
 const app = express();
 const port = process.env.PORT || 5000
@@ -23,6 +24,7 @@ app.use((req, res, next) => {
 
 app.use("/api/auth", authRouter)
 app.use("/api/user", userRouter)
+app.use("/api/website", websiteRouter)
 
 app.listen(port, () => {
     console.log(`Server is Running on ${port}`);
