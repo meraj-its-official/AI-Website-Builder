@@ -1,14 +1,28 @@
 import React, { useState } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import SignIn from '../pages/SignIn'
-import { useSelector } from 'react-redux'
-import { Coins } from 'lucide-react'
+import { useDispatch, useSelector } from 'react-redux'
+import { ArrowLeft, Coins } from 'lucide-react'
+import axios from 'axios'
+import { serverUrl } from '../App'
+import { setUserData } from '../redux/userSlice'
 
-function Appbar() {
+export const HomeBar = () => {
     const [openLogin, setOpenLogin] = useState(false)
     const { userData } = useSelector(state => state.user)
     const [openProfile, setOpenProfile] = useState(false)
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    const handleLogOut = async () => {
+        try {
+            await axios.get(`${serverUrl}/api/auth/logout`, { withCredentials: true })
+            dispatch(setUserData(null))
+            setOpenProfile(false)
+        } catch (e) {
+            console.log(e)
+        }
+    }
     return (
         <div>
             <motion.div
@@ -19,7 +33,7 @@ function Appbar() {
                  border-white/10 ">
                 <div className='max-w-full mx-auto px-6 sm:px-6 lg:px-8 py-6 flex justify-between items-center'>
                     <Link className='font-bold text-3xl' to={'/'}>
-                        ConTex.Ai
+                        ConTex<span className='text-zinc-400'>.ai</span>
                     </Link>
                     <div className='flex items-center gap-5'>
                         <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'>
@@ -67,10 +81,15 @@ function Appbar() {
                                                     <span className='font-light'>{userData.credits}+</span>
                                                 </button>
 
-                                                <button className="md:hidden w-full px-4 py-3 flex justify-center cursor-pointer 
-                                                 gap-2 text-sm font-medium border-b border-white/10 hover:bg-white/5">Dashboard</button>
-                                                <button className="md:hidden w-full px-4 py-3 flex justify-center cursor-pointer 
-                                                 gap-2 text-sm font-bold  text-red-500 border-b border-white/10 hover:bg-red-950">Logout</button>
+                                                <button onClick={() => navigate("/dashboard")} className="w-full px-4 py-3 flex justify-center cursor-pointer 
+                                                 gap-2 text-sm font-medium border-b border-white/10 hover:bg-white/5">
+                                                    Dashboard
+                                                </button>
+
+                                                <button onClick={handleLogOut} className="w-full px-4 py-3 flex justify-center cursor-pointer 
+                                                 gap-2 text-sm font-bold  text-red-500 border-b border-white/10 hover:bg-red-950">
+                                                    Logout
+                                                </button>
                                             </motion.div>
                                         </>
                                     )}
@@ -78,10 +97,49 @@ function Appbar() {
                             </div>}
                     </div>
                 </div>
-            </motion.div>
-            {openLogin && <SignIn open={openLogin} onClose={() => setOpenLogin(false)} />}
-        </div>
+            </motion.div >
+            {openLogin && <SignIn open={openLogin} onClose={() => setOpenLogin(false)} />
+            }
+        </div >
     )
 }
 
-export default Appbar
+
+export const DashboardBar = () => {
+    const navigate = useNavigate()
+    return (
+        <div>
+            <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/40 border-b
+                 border-white/10">
+                <div className='max-w-full mx-auto px-6 my-4 h-16 flex items-center justify-between'>
+                    <div className='flex items-center gap-4'>
+                        <button onClick={() => navigate('/')} className='p-2 rounded-lg cursor-pointer hover:bg-white/10 transition'>
+                            <ArrowLeft size={16} /></button>
+                        <h1 className='font-semibold text-lg'>Dashboard</h1>
+                    </div>
+                    <button onClick={() => navigate('/generate')} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold hover:scale-105
+                    transition cursor-pointer items-center"> + New Website </button>
+                </div>
+            </div >
+        </div >
+    )
+}
+
+export const GenerateBar = () => {
+    const navigate = useNavigate()
+    return (
+        <div>
+            <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b
+                 border-white/20 bg-transparent">
+                <div className='max-w-full mx-auto px-15 my-4 h-16 flex items-center justify-between'>
+                    <div className='flex items-center gap-4'>
+                        <button onClick={() => navigate('/dashboard')} className='p-2 rounded-lg cursor-pointer hover:bg-white/10 transition'>
+                            <ArrowLeft size={16} /></button>
+                        <h1 className='font-bold text-3xl'>ConTex<span className='text-zinc-400'>.ai</span></h1>
+                    </div>
+                </div>
+            </div >
+        </div >
+    )
+}
+

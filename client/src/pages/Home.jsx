@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { motion } from "motion/react"
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import SignIn from './SignIn'
-import Appbar from '../components/Appbar'
+import { useSelector } from 'react-redux'
+import { HomeBar } from '../components/AppBar'
 
 function Home() {
 
@@ -11,11 +12,12 @@ function Home() {
         "Fully Responsive Layouts",
         "Production Ready Output"
     ]
-
+    const navigate = useNavigate()
+    const { userData } = useSelector(state => state.user)
     const [openLogin, setOpenLogin] = useState(false)
     return (
         <div className="relative min-h-screen bg-[#040404] text-white overflow-y-auto">
-            <Appbar />
+            <HomeBar />
             <section className="pt-44 pb-32 px-6 text-center">
                 <motion.h1
                     initial={{ opacity: 0, y: 40 }}
@@ -34,9 +36,9 @@ function Home() {
                 >
                     Describe your idea into Prompt and let AI generate a modern, responsive, production-ready website.
                 </motion.p>
-                <button onClick={() => setOpenLogin(true)} className="px-10 py-4 mt-12 rounded-xl bg-white text-black
+                <button onClick={() => userData ? navigate("/dashboard") : setOpenLogin(true)} className="px-10 py-4 mt-12 rounded-xl bg-white text-black
                  font-semibold hover:scale-105 transition cursor-pointer">
-                    Get Started
+                    {userData ? "Go to Dashboard" : "Get Started"}
                 </button>
             </section>
 

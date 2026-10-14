@@ -10,7 +10,6 @@ import { setUserData } from '../redux/userSlice'
 
 function SignIn({ open, onClose }) {
     const dispatch = useDispatch()
-    if (!open) return null;
     const handelGoogleAuth = async () => {
         try {
             const result = await signInWithPopup(auth, provider)
