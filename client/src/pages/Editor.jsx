@@ -1,0 +1,214 @@
+import axios from 'axios'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { serverUrl } from '../App'
+import { EditorBar } from '../components/AppBar'
+import { Code2, Monitor, Rocket, Send } from 'lucide-react'
+
+function Editor() {
+    const { id } = useParams()
+    const [website, setWebsite] = useState(null)
+    const [error, setError] = useState("")
+    const [code, setCode] = useState("")
+    const [messages, setMessages] = useState([])
+    const [prompt, setPrompt] = useState("")
+    const iframeRef = useRef(null)
+    const [updateLoading, setUpdateLoading] = useState(false)
+    const [thinkingIndex, setThinkingIndex] = useState(0)
+    const [sidebarWidth, setSidebarWidth] = useState(400);
+    const isDragging = useRef(false);
+    const [activeDrag, setActiveDrag] = useState(false);
+    const thinkingSteps = [
+        "Understanding your request...",
+        "Planning layout changes...",
+        "Improving responsiveness...",
+        "Applying animations...",
+        "Finalizing update..."
+    ]
+
+    const handleUpdate = async () => {
+        try {
+            if (!prompt) return
+            setUpdateLoading(true)
+            const text = prompt
+            setPrompt("")
+            setMessages((m) => [...m, { role: "user", content: prompt }])
+            const result = await axios.post(`${serverUrl}/api/website/update/${id}`, { prompt: text },
+                { withCredentials: true })
+            setUpdateLoading(false)
+            setMessages((m) => [...m, { role: "ai", content: result.data.message }])
+            setCode(result.data.code)
+        } catch (e) {
+            setUpdateLoading(false)
+            console.log(e)
+        }
+    }
+
+    const handleMouseMove = useCallback((e) => {
+        if (!isDragging.current) return;
+
+        requestAnimationFrame(() => {
+            const newWidth = e.clientX;
+            if (newWidth >= 200 && newWidth <= 600) {
+                setSidebarWidth(newWidth);
+            }
+        });
+    }, []);
+
+    const handleMouseUp = useCallback(() => {
+        isDragging.current = false;
+        setActiveDrag(false);
+        document.body.style.cursor = 'default';
+    }, []);
+
+    useEffect(() => {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [handleMouseMove, handleMouseUp]);
+
+    const startResize = (e) => {
+        e.preventDefault();
+        isDragging.current = true;
+        setActiveDrag(true);
+        document.body.style.cursor = 'col-resize';
+    };
+
+
+    useEffect(() => {
+        if (!updateLoading) return;
+        const i = setInterval(() => {
+            setThinkingIndex((i) => (i + 1) % thinkingSteps.length)
+        }, 1500)
+
+        return () => clearInterval(i)
+    }, [updateLoading])
+
+    useEffect(() => {
+        const handleGetWebsite = async () => {
+            try {
+                const result = await axios.get(`${serverUrl}/api/website/get-by-id/${id}`,
+                    { withCredentials: true })
+                setWebsite(result.data)
+                setCode(result.data.latestCode)
+                setMessages(result.data.conversation)
+            } catch (e) {
+                setError(e.response.data.message)
+            }
+        }
+        handleGetWebsite()
+    }, [id])
+
+    useEffect(() => {
+        if (!iframeRef.current || !code) return;
+        const blob = new Blob([code], { type: "text/html" })
+        const url = URL.createObjectURL(blob)
+        iframeRef.current.src = url
+        return () => URL.revokeObjectURL(url)
+    }, [code])
+
+    if (error) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-black text-red-400">
+                {error}
+            </div>
+        )
+    }
+    if (!website) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-black text-white">
+                Loading...
+            </div>
+        )
+    }
+
+    return (
+        <div className="h-screen w-screen bg-linear-to-br from-[#050505] via-slate-950 to-[#050505] text-white">
+            <EditorBar />
+            <div className='h-full max-w-full flex pt-17 px-2 '>
+                <aside style={{ width: `${sidebarWidth}px` }}
+                    className={`shrink-0 hidden md:flex w-95 flex-col mr-2 mb-4 rounded-2xl bg-black/80 border-r border-white/10 
+                    ${!activeDrag ? 'transition-all duration-75' : ''}`}>
+                    <>
+                        <div className='flex-1 px-4 py-4 space-y-4 overflow-y-auto'>
+                            {messages.map((m, i) => (
+                                <div
+                                    key={i}
+                                    className={`max-w-[85%] ${m.role === "user" ? "ml-auto" : "mr-auto"}`}
+                                >
+                                    <div
+                                        className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                                 ${m.role === "user"
+                                                ? "bg-white text-black"
+                                                : "bg-white/5 border border-white/10 text-zinc-200"
+                                            }`}
+                                    >
+                                        {m.content}
+                                    </div>
+                                </div>
+                            ))}
+                            {updateLoading &&
+                                <div className='max-w-[85%] mr-auto'>
+                                    <div className='px-4 p-2.5 rounded-2xl text-xs border
+                                    border-white/10 text-zinc-400 italic bg-transparent'
+                                    >{thinkingSteps[thinkingIndex]}</div>
+                                </div>
+                            }
+                        </div>
+                        <div className='p-3 border-t border-white/10 rounded-b-lg'>
+                            <div className='flex gap-2'>
+                                <textarea
+                                    row="1" placeholder='Describe Changes...' className='flex-1 resize-none rounded-2xl px-3 py-1 border-2
+                                     border-white/10 text-sm focus:ring-2 focus:ring-white/20 outline-none '
+                                    onChange={(e) => setPrompt(e.target.value)} value={prompt}
+                                ></textarea>
+                                <button className='px-5 py-1 cursor-pointer rounded-xl bg-white text-black'
+                                    onClick={handleUpdate}
+                                > <Send size={14} /> </button>
+                            </div>
+                        </div>
+                    </>
+                </aside>
+                <div
+                    onMouseDown={startResize}
+                    className={`w-1.5 h-full cursor-col-resize hover:bg-blue-600 transition-colors z-30 relative shrink-0
+          ${activeDrag ? 'bg-blue-500 w-2' : 'bg-transparent'}`}
+                ></div>
+                <div className='flex-1 flex flex-col relative'>
+                    <div className='h-14 px-4 flex justify-between items-center border-b border-white/10 bg-black/80'>
+                        <span className='text-xs text-zinc-400'>Live Preview</span>
+                        <div className='flex gap-2'>
+                            <button className='flex items-center gap-2 px-6 py-1.5 rounded-lg bg-linear-to-r cursor-pointer
+                             from-indigo-500 to-purple-500 text-sm font-semibold hover:scale-105 transition'><Rocket size={16} /> </button>
+                            <button className='cursor-pointer gap-2'><Code2 size={18} /> </button>
+                            <button className='cursor-pointer gap-2'><Monitor size={18} /> </button>
+                        </div>
+                    </div>
+                    <iframe ref={iframeRef} className='flex-1 w-full mb-4 rounded-2xl border border-white/10 bg-white overflow-y-auto' />
+                    <footer className="fixed bottom-0 inset-x-0 z-40 px-5 py-4 sm:py-5 md:hidden">
+                        <div className='p-3 border-t border-white/10 rounded-b-lg'>
+                            <div className='flex gap-2'>
+                                <textarea
+                                    row="1" placeholder='Describe Changes...' className='flex-1 resize-none rounded-2xl px-3 py-1 border-2
+                                     border-white/10 text-sm focus:ring-2 focus:ring-white/20 outline-none bg-black/70'
+                                    onChange={(e) => setPrompt(e.target.value)} value={prompt}
+                                ></textarea>
+                                <button className='px-5 py-1 cursor-pointer rounded-xl bg-white text-black'
+                                    onClick={handleUpdate}
+                                > <Send size={14} /> </button>
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            </div>
+        </div >
+    )
+
+
+}
+
+
+export default Editor

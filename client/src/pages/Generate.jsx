@@ -4,8 +4,10 @@ import { motion } from 'motion/react'
 import { useState } from 'react'
 import axios from 'axios'
 import { serverUrl } from '../App'
+import { useNavigate } from 'react-router-dom'
 
 function Generate() {
+    // const navigate = useNavigate()
     const [prompt, setPrompt] = useState("")
     const handleGenerateWebsite = async () => {
         try {
@@ -22,7 +24,7 @@ function Generate() {
     return (
         <div className="relative min-h-screen bg-linear-to-br from-[#050505] via-slate-950 to-[#050505] text-white overflow-y-auto">
             <GenerateBar />
-            <div className='max-w-6xl mx-auto pt-45 pb-32 px-6'>
+            <div className='max-w-6xl mx-auto pt-30 pb-32 px-6'>
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -38,7 +40,7 @@ function Generate() {
                         not shortcuts.
                     </p>
                 </motion.div>
-                <div className='pt-45'>
+                <div className='pt-25'>
                     <h1 className='text-xl font-semibold mb-4'>Describe your website</h1>
                     <div className='relative'>
                         <textarea

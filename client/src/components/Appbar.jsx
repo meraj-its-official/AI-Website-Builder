@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import SignIn from '../pages/SignIn'
 import { useDispatch, useSelector } from 'react-redux'
 import { ArrowLeft, Coins } from 'lucide-react'
@@ -55,7 +55,8 @@ export const HomeBar = () => {
                             :
                             <div className='relative'>
                                 <button className='flex items-center' onClick={() => setOpenProfile(!openProfile)}>
-                                    <img src={userData.avatar || `https://ui-avatars.com/api/?name=${userData.name}`} alt="" className="w-9 h-9 rounded-full border cursor-pointer border-white/20 object-cover" />
+                                    <img src={userData.avatar || `https://ui-avatars.com/api/?name=${userData.name}`} alt="" referrerPolicy='no-referrer'
+                                        className="w-9 h-9 rounded-full border cursor-pointer border-white/20 object-cover" />
                                 </button>
                                 <AnimatePresence>
                                     {openProfile && (
@@ -129,6 +130,7 @@ export const DashboardBar = () => {
 
 export const GenerateBar = () => {
     const navigate = useNavigate()
+    const { userData } = useSelector(state => state.user)
     return (
         <div>
             <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b
@@ -139,9 +141,77 @@ export const GenerateBar = () => {
                             <ArrowLeft size={16} /></button>
                         <h1 className='font-bold text-3xl'>ConTex<span className='text-zinc-400'>.ai</span></h1>
                     </div>
+                    <div className='flex items-center gap-5'>
+                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'>
+                            Upgrade
+                        </div>
+                        {userData && <div className='hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-full
+                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'>
+                            <Coins size={14} className="text-yellow-400" />
+                            <span className="text-zinc-300">Credits</span>
+                            <span className='font-light'>{userData.credits}+</span>
+                        </div>}
+                    </div>
                 </div>
             </div >
         </div >
     )
+}
+
+
+export const EditorBar = () => {
+    const navigate = useNavigate()
+    const { userData } = useSelector(state => state.user)
+    const { id } = useParams()
+    const [website, setWebsite] = useState(null)
+    const [error, setError] = useState("")
+    useEffect(() => {
+        const handleGetWebsite = async () => {
+            try {
+                const result = await axios.get(`${serverUrl}/api/website/get-by-id/${id}`,
+                    { withCredentials: true })
+                setWebsite(result.data)
+            } catch (e) {
+                setError(e.response.data.message)
+            }
+        }
+        handleGetWebsite()
+    }, [id])
+
+    return (
+        <div>
+            <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b
+                 border-white/20 bg-transparent">
+                <div className='max-w-full mx-auto px-15 my-2 h-12 flex items-center justify-between'>
+                    <div className='flex items-center gap-4'>
+                        <button onClick={() => navigate('/dashboard')} className='p-2 rounded-lg cursor-pointer hover:bg-white/10 transition'>
+                            <ArrowLeft size={16} /></button>
+                        <h1 className='font-medium text-2xl'>ConTex<span className='text-zinc-400'>.ai</span></h1>
+                    </div>
+                    <Header />
+                    <div className='flex items-center gap-5'>
+                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'>
+                            Upgrade
+                        </div>
+                        {userData && <div className='hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-full
+                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'>
+                            <Coins size={14} className="text-yellow-400" />
+                            <span className="text-zinc-300">Credits</span>
+                            <span className='font-light'>{userData.credits}+</span>
+                        </div>}
+                    </div>
+                </div>
+            </div >
+        </div >
+    )
+
+    function Header() {
+        return (
+            <div className='h-14 px-6 flex items-center justify-between'>
+                <span className="font-semibold truncate bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text 
+                text-transparent"> {website?.title}</span>
+            </div>
+        )
+    }
 }
 
