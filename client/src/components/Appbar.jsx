@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import SignIn from '../pages/SignIn'
 import { useDispatch, useSelector } from 'react-redux'
-import { ArrowLeft, Coins } from 'lucide-react'
+import { ArrowLeft, Coins, X } from 'lucide-react'
 import axios from 'axios'
 import { serverUrl } from '../App'
 import { setUserData } from '../redux/userSlice'
@@ -139,7 +139,9 @@ export const GenerateBar = () => {
                     <div className='flex items-center gap-4'>
                         <button onClick={() => navigate('/dashboard')} className='p-2 rounded-lg cursor-pointer hover:bg-white/10 transition'>
                             <ArrowLeft size={16} /></button>
-                        <h1 className='font-bold text-3xl'>ConTex<span className='text-zinc-400'>.ai</span></h1>
+                        <Link className='font-bold text-3xl' to={'/'}>
+                            ConTex<span className='text-zinc-400'>.ai</span>
+                        </Link>
                     </div>
                     <div className='flex items-center gap-5'>
                         <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'>
@@ -159,7 +161,7 @@ export const GenerateBar = () => {
 }
 
 
-export const EditorBar = () => {
+export const EditorBar = ({ onclose }) => {
     const navigate = useNavigate()
     const { userData } = useSelector(state => state.user)
     const { id } = useParams()
@@ -186,7 +188,9 @@ export const EditorBar = () => {
                     <div className='flex items-center gap-4'>
                         <button onClick={() => navigate('/dashboard')} className='p-2 rounded-lg cursor-pointer hover:bg-white/10 transition'>
                             <ArrowLeft size={16} /></button>
-                        <h1 className='font-medium text-2xl'>ConTex<span className='text-zinc-400'>.ai</span></h1>
+                        <Link className='font-medium text-2xl' to={'/'}>
+                            ConTex<span className='text-zinc-400'>.ai</span>
+                        </Link>
                     </div>
                     <Header />
                     <div className='flex items-center gap-5'>
@@ -200,6 +204,8 @@ export const EditorBar = () => {
                             <span className='font-light'>{userData.credits}+</span>
                         </div>}
                     </div>
+                    {onclose && <button className='cursor-pointer absolute top-4 right-4 p-2 mr-2 rounded-lg bg-black/70 hover:bg-white/20
+                                border-2 border-white md:hidden' onClick={onclose}><X size={18} /> </button>}
                 </div>
             </div >
         </div >
@@ -209,7 +215,7 @@ export const EditorBar = () => {
         return (
             <div className='h-14 px-6 flex items-center justify-between'>
                 <span className="font-semibold truncate bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text 
-                text-transparent"> {website?.title}</span>
+                text-transparent hidden md:block"> {website?.title}</span>
             </div>
         )
     }

@@ -3,9 +3,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { serverUrl } from '../App'
 import { EditorBar } from '../components/AppBar'
-import { Code2, Monitor, Rocket, Send } from 'lucide-react'
+import { Code2, MessageSquare, Monitor, Rocket, Send, X } from 'lucide-react'
+import { animate, AnimatePresence, motion } from 'motion/react'
+import Editor from '@monaco-editor/react';
 
-function Editor() {
+function WebsiteEditor() {
     const { id } = useParams()
     const [website, setWebsite] = useState(null)
     const [error, setError] = useState("")
@@ -18,6 +20,9 @@ function Editor() {
     const [sidebarWidth, setSidebarWidth] = useState(400);
     const isDragging = useRef(false);
     const [activeDrag, setActiveDrag] = useState(false);
+    const [showCode, setShowCode] = useState(false)
+    const [showPreview, setShowPreview] = useState(false)
+    const [showChat, setShowChat] = useState(false)
     const thinkingSteps = [
         "Understanding your request...",
         "Planning layout changes...",
@@ -177,31 +182,104 @@ function Editor() {
                     className={`w-1.5 h-full cursor-col-resize hover:bg-blue-600 transition-colors z-30 relative shrink-0
           ${activeDrag ? 'bg-blue-500 w-2' : 'bg-transparent'}`}
                 ></div>
-                <div className='flex-1 flex flex-col relative'>
+                <div className='flex-1 flex flex-col'>
                     <div className='h-14 px-4 flex justify-between items-center border-b border-white/10 bg-black/80'>
                         <span className='text-xs text-zinc-400'>Live Preview</span>
                         <div className='flex gap-2'>
                             <button className='flex items-center gap-2 px-6 py-1.5 rounded-lg bg-linear-to-r cursor-pointer
-                             from-indigo-500 to-purple-500 text-sm font-semibold hover:scale-105 transition'><Rocket size={16} /> </button>
-                            <button className='cursor-pointer gap-2'><Code2 size={18} /> </button>
-                            <button className='cursor-pointer gap-2'><Monitor size={18} /> </button>
+                             from-indigo-500 to-purple-500 text-sm font-semibold hover:scale-105 transition'><Rocket size={16} /> Deploy</button>
+                            <button className='p-2 md:hidden cursor-pointer' onClick={() => setShowChat(true)}><MessageSquare size={18} /> </button>
+                            <button className='cursor-pointer gap-2' onClick={() => setShowCode(true)}
+                            ><Code2 size={18} /> </button>
+                            <button className='cursor-pointer gap-2' onClick={() => setShowPreview(true)} ><Monitor size={18} /> </button>
                         </div>
                     </div>
-                    <iframe ref={iframeRef} className='flex-1 w-full mb-4 rounded-2xl border border-white/10 bg-white overflow-y-auto' />
-                    <footer className="fixed bottom-0 inset-x-0 z-40 px-5 py-4 sm:py-5 md:hidden">
-                        <div className='p-3 border-t border-white/10 rounded-b-lg'>
-                            <div className='flex gap-2'>
-                                <textarea
-                                    row="1" placeholder='Describe Changes...' className='flex-1 resize-none rounded-2xl px-3 py-1 border-2
-                                     border-white/10 text-sm focus:ring-2 focus:ring-white/20 outline-none bg-black/70'
-                                    onChange={(e) => setPrompt(e.target.value)} value={prompt}
-                                ></textarea>
-                                <button className='px-5 py-1 cursor-pointer rounded-xl bg-white text-black'
-                                    onClick={handleUpdate}
-                                > <Send size={14} /> </button>
-                            </div>
-                        </div>
-                    </footer>
+                    <iframe ref={iframeRef} className='flex-1 w-full mb-4 rounded-2xl border border-white/10 bg-white' />
+                    <AnimatePresence>
+                        {showCode && (
+                            <motion.div
+                                initial={{ x: "100%" }}
+                                animate={{ x: 0 }}
+                                exit={{ x: "100%" }}
+                                className='fixed inset-y-0 right-0 w-full mt-31 mb-4 lg:w-[45%] z-9999 bg-transparent 
+                               rounded-tl-xl flex flex-col border-4 border-slate-600'
+                            >
+                                <div className='h-12 px-4 flex justify-between items-center bg-[#1e1e1e] rounded-tl-xl'>
+                                    <span className='text-sm font-medium'>index.html</span>
+                                    <button className='cursor-pointer' onClick={() => setShowCode(false)} ><X size={18} /></button>
+                                </div>
+                                <Editor
+                                    theme='vs-dark'
+                                    value={code}
+                                    language='html'
+                                    onChange={(v) => setCode(v)}
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <AnimatePresence>
+                        {showPreview && (
+                            <motion.div
+                                className='fixed inset-0 z-9999 bg-black'
+                            >
+                                <iframe className='w-full h-full bg-white' srcDoc={code} />
+                                <button className='cursor-pointer absolute top-4 right-4 p-2 mr-2 rounded-lg bg-black/70 hover:bg-white/20
+                                border-2 border-white'
+                                    onClick={() => setShowPreview(false)} ><X size={20} /></button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <AnimatePresence>
+                        {showChat && (
+                            <motion.div
+                                initial={{ y: "100%" }}
+                                animate={{ y: 0 }}
+                                exit={{ y: "100%" }}
+                                className='fixed inset-0 z-9999 bg-black flex flex-col'
+                            >
+                                <EditorBar onclose={() => setShowChat(false)} />
+                                <>
+                                    <div className='flex-1 px-4 py-4 space-y-4 overflow-y-auto'>
+                                        {messages.map((m, i) => (
+                                            <div
+                                                key={i}
+                                                className={`max-w-[85%] ${m.role === "user" ? "ml-auto" : "mr-auto"}`}
+                                            >
+                                                <div
+                                                    className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                                 ${m.role === "user"
+                                                            ? "bg-white text-black"
+                                                            : "bg-white/5 border border-white/10 text-zinc-200"
+                                                        }`}
+                                                >
+                                                    {m.content}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {updateLoading &&
+                                            <div className='max-w-[85%] mr-auto'>
+                                                <div className='px-4 p-2.5 rounded-2xl text-xs border
+                                    border-white/10 text-zinc-400 italic bg-transparent'
+                                                >{thinkingSteps[thinkingIndex]}</div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div className='p-3 border-t border-white/10 rounded-b-lg'>
+                                        <div className='flex gap-2'>
+                                            <textarea
+                                                row="1" placeholder='Describe Changes...' className='flex-1 resize-none rounded-2xl px-3 py-1 border-2
+                                     border-white/10 text-sm focus:ring-2 focus:ring-white/20 outline-none '
+                                                onChange={(e) => setPrompt(e.target.value)} value={prompt}
+                                            ></textarea>
+                                            <button className='px-5 py-1 cursor-pointer rounded-xl bg-white text-black'
+                                                onClick={handleUpdate}
+                                            > <Send size={14} /> </button>
+                                        </div>
+                                    </div>
+                                </>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div >
@@ -210,5 +288,4 @@ function Editor() {
 
 }
 
-
-export default Editor
+export default WebsiteEditor

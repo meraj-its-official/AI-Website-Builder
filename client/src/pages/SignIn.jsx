@@ -43,7 +43,7 @@ function SignIn({ open, onClose }) {
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 40 }}
                         transition={{ duration: 0.45, ease: "easeOut" }}
-                        className="relative w-full max-w-md p-[1px] rounded-3xl bg-gradient-to-br 
+                        className="relative w-full max-w-md p-px rounded-3xl bg-linear-to-br 
                         from-purple-500/40 via-blue-500/30 to-transparent"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -79,7 +79,7 @@ function SignIn({ open, onClose }) {
                                 text-black font-semibold shadow-xl overflow-hidden cursor-pointer"
                                     onClick={handelGoogleAuth}
                                 >
-                                    <div className='absolute inset-0 bg-gradient-to-r from-zinc-100 to-white 
+                                    <div className='absolute inset-0 bg-linear-to-r from-zinc-100 to-white 
                                 opacity-0 group-hover:opacity-100 transition'/>
 
                                     <div className="relative flex items-center justify-center gap-3">
