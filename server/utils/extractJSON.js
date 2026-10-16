@@ -21,7 +21,6 @@ export const extractJSON = (text) => {
         // 🛠️ FIX 2: Auto-sanitize bad escaped backslashes (\d, \w, \s etc.)
         try {
             const sanitizedString = jsonString
-                // Single backslashes jo valid JSON escape (\", \\, \/, \b, \f, \n, \r, \t, \uXXXX)
                 .replace(/\\(?!["\\\/bfnrtu]|u[0-9a-fA-F]{4})/g, "\\\\");
 
             return JSON.parse(sanitizedString);
