@@ -1,4 +1,4 @@
-import generateResponse from "../config/openRouter.js"
+// import generateResponse from "../config/openRouter.js"
 
 export const getCurrentUser = async (req, res) => {
     try {
