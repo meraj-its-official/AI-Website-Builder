@@ -7,6 +7,14 @@ import { Code2, MessageSquare, Monitor, Rocket, Send, X } from 'lucide-react'
 import { animate, AnimatePresence, motion } from 'motion/react'
 import Editor from '@monaco-editor/react';
 
+const thinkingSteps = [
+    "Understanding your request...",
+    "Planning layout changes...",
+    "Improving responsiveness...",
+    "Applying animations...",
+    "Finalizing update..."
+]
+
 function WebsiteEditor() {
     const { id } = useParams()
     const [website, setWebsite] = useState(null)
@@ -23,18 +31,11 @@ function WebsiteEditor() {
     const [showCode, setShowCode] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
     const [showChat, setShowChat] = useState(false)
-    const thinkingSteps = [
-        "Understanding your request...",
-        "Planning layout changes...",
-        "Improving responsiveness...",
-        "Applying animations...",
-        "Finalizing update..."
-    ]
 
     const handleUpdate = async () => {
+        if (!prompt) return
+        setUpdateLoading(true)
         try {
-            if (!prompt) return
-            setUpdateLoading(true)
             const text = prompt
             setPrompt("")
             setMessages((m) => [...m, { role: "user", content: prompt }])
@@ -45,6 +46,15 @@ function WebsiteEditor() {
             setCode(result.data.code)
         } catch (e) {
             setUpdateLoading(false)
+            console.log(e)
+        }
+    }
+
+    const handleDeploy = async () => {
+        try {
+            const result = await axios.get(`${serverUrl}/api/website/deploy/${website._id}`, { withCredentials: true })
+            window.open(`${result.data.url}`, "_blank")
+        } catch (e) {
             console.log(e)
         }
     }
@@ -186,15 +196,19 @@ function WebsiteEditor() {
                     <div className='h-14 px-4 flex justify-between items-center border-b border-white/10 bg-black/80'>
                         <span className='text-xs text-zinc-400'>Live Preview</span>
                         <div className='flex gap-2'>
-                            <button className='flex items-center gap-2 px-6 py-1.5 rounded-lg bg-linear-to-r cursor-pointer
-                             from-indigo-500 to-purple-500 text-sm font-semibold hover:scale-105 transition'><Rocket size={16} /> Deploy</button>
+                            {website.deployed ? "" :
+                                <button className='flex items-center gap-2 px-6 py-1.5 rounded-lg bg-linear-to-r cursor-pointer
+                             from-indigo-500 to-purple-500 text-sm font-semibold hover:scale-105 transition'
+                                    onClick={handleDeploy}
+                                ><Rocket size={16} /> Deploy</button>}
                             <button className='p-2 md:hidden cursor-pointer' onClick={() => setShowChat(true)}><MessageSquare size={18} /> </button>
                             <button className='cursor-pointer gap-2' onClick={() => setShowCode(true)}
                             ><Code2 size={18} /> </button>
                             <button className='cursor-pointer gap-2' onClick={() => setShowPreview(true)} ><Monitor size={18} /> </button>
                         </div>
                     </div>
-                    <iframe ref={iframeRef} className='flex-1 w-full mb-4 rounded-2xl border border-white/10 bg-white' />
+                    <iframe ref={iframeRef} className='flex-1 w-full mb-4 rounded-2xl border border-white/10 bg-white'
+                        sandbox='allow-scripts allow-same-origin allow-forms' />
                     <AnimatePresence>
                         {showCode && (
                             <motion.div
@@ -202,7 +216,7 @@ function WebsiteEditor() {
                                 animate={{ x: 0 }}
                                 exit={{ x: "100%" }}
                                 className='fixed inset-y-0 right-0 w-full mt-31 mb-4 lg:w-[45%] z-9999 bg-transparent 
-                               rounded-tl-xl flex flex-col border-4 border-slate-600'
+                               rounded-tl-xl flex flex-col border-2 border-slate-600'
                             >
                                 <div className='h-12 px-4 flex justify-between items-center bg-[#1e1e1e] rounded-tl-xl'>
                                     <span className='text-sm font-medium'>index.html</span>
@@ -222,7 +236,8 @@ function WebsiteEditor() {
                             <motion.div
                                 className='fixed inset-0 z-9999 bg-black'
                             >
-                                <iframe className='w-full h-full bg-white' srcDoc={code} />
+                                <iframe className='w-full h-full bg-white' srcDoc={code}
+                                    sandbox='allow-scripts allow-same-origin allow-forms' />
                                 <button className='cursor-pointer absolute top-4 right-4 p-2 mr-2 rounded-lg bg-black/70 hover:bg-white/20
                                 border-2 border-white'
                                     onClick={() => setShowPreview(false)} ><X size={20} /></button>

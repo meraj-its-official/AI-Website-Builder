@@ -38,7 +38,8 @@ function Home() {
                     >
                         Describe your idea into Prompt and let AI generate a modern, responsive, production-ready website.
                     </motion.p>
-                    <button onClick={() => userData ? navigate("/dashboard") : setOpenLogin(true)} className="px-10 py-4 mt-12 rounded-xl bg-white text-black
+                    <button onClick={() => userData ? navigate("/dashboard") : setOpenLogin(true)}
+                        className="px-10 py-4 mt-12 rounded-xl bg-white text-black
                  font-semibold hover:scale-105 transition cursor-pointer">
                         {userData ? "Go to Dashboard" : "Get Started"}
                     </button>
