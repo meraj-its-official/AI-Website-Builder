@@ -32,17 +32,19 @@ export const HomeBar = () => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5 }}
                 className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/40 border-b
-                 border-white/10 ">
+                 border-white/10">
                 <div className='max-w-full mx-auto px-6 sm:px-6 lg:px-8 py-6 flex justify-between items-center'>
                     <Link className='font-bold text-3xl' to={'/'}>
                         ConTex<span className='text-zinc-400'>.ai</span>
                     </Link>
                     <div className='flex items-center gap-5'>
-                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'>
+                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'
+                            onClick={() => navigate('/pricing')}>
                             {userData ? "  Upgrade" : "Price"}
                         </div>
                         {userData && <div className='hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-full
-                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'>
+                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'
+                            onClick={() => navigate('/pricing')}>
                             <Coins size={14} className="text-yellow-400" />
                             <span className="text-zinc-300">Credits</span>
                             <span className='font-light'>{userData.credits}+</span>
@@ -144,11 +146,13 @@ export const GenerateBar = () => {
                         </Link>
                     </div>
                     <div className='flex items-center gap-5'>
-                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'>
+                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'
+                            onClick={() => navigate('/pricing')}>
                             Upgrade
                         </div>
                         {userData && <div className='hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-full
-                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'>
+                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'
+                            onClick={() => navigate('/pricing')}>
                             <Coins size={14} className="text-yellow-400" />
                             <span className="text-zinc-300">Credits</span>
                             <span className='font-light'>{userData.credits}+</span>
@@ -194,11 +198,13 @@ export const EditorBar = ({ onclose }) => {
                     </div>
                     <Header />
                     <div className='flex items-center gap-5'>
-                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'>
+                        <div className='hidden md:inline font-medium text-lg text-zinc-400 hover:text-white cursor-pointer'
+                            onClick={() => navigate('/pricing')}>
                             Upgrade
                         </div>
                         {userData && <div className='hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-full
-                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'>
+                        bg-white/5 border border-white/10 text-sm cursor-pointer hover:bg-white/10 transition'
+                            onClick={() => navigate('/pricing')}>
                             <Coins size={14} className="text-yellow-400" />
                             <span className="text-zinc-300">Credits</span>
                             <span className='font-light'>{userData.credits}+</span>

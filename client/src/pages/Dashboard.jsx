@@ -60,7 +60,7 @@ function Dashboard() {
         <>
             <div className="relative min-h-screen bg-[#050505] text-white overflow-y-auto">
                 <DashboardBar />
-                <div className='max-w-full mx-auto px-62 mt-45 flex justify-start'>
+                <div className='max-w-full mx-auto px-20 mt-45 flex justify-start items-start'>
                     <motion.div
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -91,10 +91,10 @@ function Dashboard() {
 
                             return <motion.div
                                 key={i}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                whileHover={{ y: 6, x: 15 }}
+                                initial={{ opacity: 0, y: 40 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.15 }}
+                                whileHover={{ y: -14, scale: 1.03 }}
                                 onClick={() => navigate(`/editor/${web._id}`)}
                                 className='rounded-2xl bg-white/5 border-2 border-white/10
                                 overflow-hidden hover:bg-white/10 transition flex flex-col '

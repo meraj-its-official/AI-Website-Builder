@@ -74,7 +74,7 @@ function Generate() {
         <>
             <div className="relative min-h-screen bg-linear-to-br from-[#050505] via-slate-950 to-[#050505] text-white overflow-y-auto">
                 <GenerateBar />
-                <div className='max-w-6xl mx-auto p-10'>
+                <div className='max-w-6xl mx-auto px-10'>
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -90,7 +90,7 @@ function Generate() {
                             not shortcuts.
                         </p>
                     </motion.div>
-                    <div className='mx-25'>
+                    <div className='px-5'>
                         <h1 className='text-xl font-semibold mb-4'>Describe your website</h1>
                         <div className='relative'>
                             <textarea
