@@ -13,14 +13,14 @@ export const billingOrders = async (req, res) => {
         if (!selectPlan || selectPlan.price == 0) {
             return res.status(400).json({ message: "invalid paid plan" })
         }
-        // 3. Configure the Razorpay order options mapping your dataset
+
         const options = {
-            amount: Math.round(selectPlan.price * 100), // Securely pulled from backend configuration
+            amount: Math.round(selectPlan.price * 100),
             currency: 'INR',
             receipt: `rcpt_${Date.now()}`,
             notes: {
                 userId: String(userId),
-                credits: String(selectPlan.credits), // Stored as string for Razorpay compatibility
+                credits: String(selectPlan.credits),
                 plan: String(selectPlan.plan)
             }
         };
@@ -68,14 +68,14 @@ export const billingVerify = async (req, res) => {
         const orderDetails = await razorpayKey.orders.fetch(razorpay_order_id);
         const { userId, credits, plan } = orderDetails.notes;
 
-        // 2. User ka database update karein
+
         if (userId && credits) {
             await User.findByIdAndUpdate(userId, {
                 $inc: { credits: Number(credits) },
                 currentPlan: plan,
                 lastPaymentStatus: 'SUCCESS'
             });
-            console.log(`✅ Database successfully updated for user ${userId}. Added ${credits} credits.`);
+            console.log(`Database successfully updated for user ${userId}. Added ${credits} credits.`);
         }
 
         return res.status(200).json({

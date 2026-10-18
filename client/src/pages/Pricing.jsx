@@ -77,13 +77,11 @@ function Pricing() {
     };
 
     const handleSubscription = async (planKey) => {
-        // Free tier direct logic bypass
         if (planKey === 'free') {
             navigate('/dashboard');
             return;
         }
         setLoadingPlan(planKey);
-        // Auth Gate check rule 
         if (!userData || !userData._id) {
             setOpenLogin(true);
             return;
@@ -92,14 +90,12 @@ function Pricing() {
         try {
             setLoadingPlan(planKey);
 
-            // Step A: Load razorpay core package script wrapper
             const scriptLoaded = await loadRazorpayScript();
             if (!scriptLoaded) {
                 alert('Razorpay Payment Gateway failed to load. Are you online?');
                 return;
             }
 
-            // Step B: Initialize structural order instance on Node.js application server
             const response = await axios.post(`${serverUrl}/api/payment/orders`, {
                 planType: planKey,
                 userId: userData._id
@@ -112,7 +108,6 @@ function Pricing() {
             const { order, planType, razorpayKeyId } = data;
             const startupName = "ConTex.ai";
 
-            // Step C: Setup layout parameters for standard UI payment modal execution context
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_API_KEY,
                 amount: order.amount,
@@ -146,18 +141,17 @@ function Pricing() {
                     name: userData.name || '',
                     email: userData.email || '',
                 },
-                theme: { color: '#4F46E5' }, // Indigo configuration matching AI theme layouts
+                theme: { color: '#4F46E5' },
                 modal: {
                     ondismiss: function () {
                         console.log("Modal display forcefully exited by terminal window action.");
-                        navigate('/pricing'); // Go to Pricing Page
+                        navigate('/pricing');
                     }
                 }
             };
 
             const rzp = new window.Razorpay(options);
 
-            // Catch native runtime core interface engine runtime exceptions
             rzp.on('payment.failed', function (failPayload) {
                 console.error("Internal processing channel connection failure:", failPayload.error);
                 navigate('/pricing');
