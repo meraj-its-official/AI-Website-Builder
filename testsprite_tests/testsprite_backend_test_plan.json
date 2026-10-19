@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "postapiauthgooglevalidtoken",
+    "description": "Test POST /api/auth/google with a valid Google identity token to ensure it returns 200 with a user session and sets a session cookie."
+  },
+  {
+    "id": "TC002",
+    "title": "postapiauthgoogleinvalidtoken",
+    "description": "Test POST /api/auth/google with an invalid or missing identity token to verify it returns 401 authentication error and does not create a session."
+  },
+  {
+    "id": "TC003",
+    "title": "postapiauthlogoutvalidsession",
+    "description": "Test POST /api/auth/logout with a valid session cookie to confirm it returns 200 success and clears the session cookie."
+  },
+  {
+    "id": "TC004",
+    "title": "postapiauthlogoutinvalidsession",
+    "description": "Test POST /api/auth/logout without a valid session cookie to verify it returns an authentication error or appropriate failure response."
+  },
+  {
+    "id": "TC005",
+    "title": "postapiwebsitegeneratevalidprompt",
+    "description": "Test POST /api/website/generate with a valid prompt and authenticated session to ensure it returns 200 with a saved Website project."
+  },
+  {
+    "id": "TC006",
+    "title": "postapiwebsitegenerateinvalidprompt",
+    "description": "Test POST /api/website/generate with an empty or invalid prompt to verify it returns 400 invalid prompt and does not create a project."
+  },
+  {
+    "id": "TC007",
+    "title": "putapiwebsiteidvalidupdate",
+    "description": "Test PUT /api/website/:id with valid updated code and ownership via authenticated session to confirm it returns 200 with updated Website data."
+  },
+  {
+    "id": "TC008",
+    "title": "putapiwebsiteidunauthorizedupdate",
+    "description": "Test PUT /api/website/:id with a project ID owned by another user or invalid session to verify it returns 403 unauthorized or 404 not found and does not save changes."
+  },
+  {
+    "id": "TC009",
+    "title": "postapipaymentcreateorderauthenticated",
+    "description": "Test POST /api/payment/create-order with a selected planId and authenticated session to ensure it returns 200 with a server-created order."
+  },
+  {
+    "id": "TC010",
+    "title": "postapipaymentverifyinvalidsignature",
+    "description": "Test POST /api/payment/verify with an invalid Razorpay signature or replayed payment details to verify it returns 400 invalid signature and does not grant credits."
+  }
+]

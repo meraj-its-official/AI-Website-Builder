@@ -359,7 +359,7 @@ export const deploy = async (req, res) => {
         }
 
         if (!website.slug) {
-            website.slug = website.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0.45) + website._id.toString().slice(-10)
+            website.slug = website.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0.45) + website._id.toString().slice(-15)
         }
 
         website.deployed = true
