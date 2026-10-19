@@ -13,22 +13,28 @@ function Dashboard() {
     const navigate = useNavigate()
     const [websites, setWebsites] = useState([])
     const [loading, setLoading] = useState(false)
+    const [deployingId, setDeployingId] = useState(null)
     const [error, setError] = useState("")
     const [copiedId, setCopiedId] = useState(null)
 
     const handleDeploy = async (id) => {
+        setDeployingId(id);
         try {
             const result = await axios.get(`${serverUrl}/api/website/deploy/${id}`, { withCredentials: true })
-            window.open(`${result.data.url}`, "_blank")
-            setWebsites((prev) => {
-                prev.map((web) =>
-                    web._id === id
-                        ? { ...web, deployed: true, deployUrl: result.data.url }
-                        : web
+            if (result.data?.url) {
+                window.open(`${result.data.url}`, "_blank")
+                setWebsites((prev) =>
+                    prev.map((web) =>
+                        web._id === id
+                            ? { ...web, deployed: true, deployUrl: result.data.url }
+                            : web
+                    )
                 )
-            })
+            }
         } catch (e) {
             console.log(e)
+        } finally {
+            setDeployingId(null);
         }
     }
 
@@ -51,9 +57,14 @@ function Dashboard() {
     }, [])
 
     const handleCopy = async (site) => {
-        await navigator.clipboard.writeText(site.deployUrl)
-        setCopiedId(site._id)
-        setTimeout(() => setCopiedId(null), 2000)
+        try {
+            await navigator.clipboard.writeText(String(site.deployedUrl))
+            setCopiedId(site._id)
+            setTimeout(() => setCopiedId(null), 2000)
+        } catch (e) {
+            console.error("Copy failed:", err);
+        }
+
     }
 
     return (

@@ -31,6 +31,7 @@ function WebsiteEditor() {
     const [showCode, setShowCode] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
     const [showChat, setShowChat] = useState(false)
+    const [deployingId, setDeployingId] = useState(null);
 
     const handleUpdate = async () => {
         if (!prompt) return
@@ -50,12 +51,18 @@ function WebsiteEditor() {
         }
     }
 
-    const handleDeploy = async () => {
+    const handleDeploy = async (id) => {
+        setDeployingId(id);
         try {
-            const result = await axios.get(`${serverUrl}/api/website/deploy/${website._id}`, { withCredentials: true })
-            window.open(`${result.data.url}`, "_blank")
+            const result = await axios.get(`${serverUrl}/api/website/deploy/${id}`, { withCredentials: true })
+            if (result.data?.url) {
+                window.open(`${result.data.url}`, "_blank")
+                setWebsite((prev) => (prev ? { ...prev, deployed: true, deployedUrl: result.data.url } : prev));
+            }
         } catch (e) {
             console.log(e)
+        } finally {
+            setDeployingId(null);
         }
     }
 
@@ -196,11 +203,12 @@ function WebsiteEditor() {
                     <div className='h-14 px-4 flex justify-between items-center border-b border-white/10 bg-black/80'>
                         <span className='text-xs text-zinc-400'>Live Preview</span>
                         <div className='flex gap-2'>
-                            {website.deployed ? "" :
+                            {!website?.deployed && (
                                 <button className='flex items-center gap-2 px-6 py-1.5 rounded-lg bg-linear-to-r cursor-pointer
                              from-indigo-500 to-purple-500 text-sm font-semibold hover:scale-105 transition'
-                                    onClick={handleDeploy}
-                                ><Rocket size={16} /> Deploy</button>}
+                                    disabled={deployingId === website?._id}
+                                    onClick={() => handleDeploy(website?._id)}
+                                ><Rocket size={16} />{deployingId === website?._id ? "Deploying..." : "Deploy"}</button>)}
                             <button className='p-2 md:hidden cursor-pointer' onClick={() => setShowChat(true)}><MessageSquare size={18} /> </button>
                             <button className='cursor-pointer gap-2' onClick={() => setShowCode(true)}
                             ><Code2 size={18} /> </button>
@@ -299,8 +307,6 @@ function WebsiteEditor() {
             </div>
         </div >
     )
-
-
 }
 
 export default WebsiteEditor

@@ -359,14 +359,14 @@ export const deploy = async (req, res) => {
         }
 
         if (!website.slug) {
-            website.slug = website.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0.45) + website._id.toString().slice(-15)
+            website.slug = website.title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 50) + website._id.toString().slice(-17)
         }
 
         website.deployed = true
         website.deployedUrl = `${process.env.FONTEND_URL}/site/${website.slug}`
         await website.save()
 
-        return res.status(200), json({
+        return res.status(200).json({
             url: website.deployedUrl
         })
     } catch (e) {
@@ -380,7 +380,6 @@ export const getBySlug = async (req, res) => {
     try {
         const website = await Website.findOne({
             slug: req.params.slug,
-            user: req.user._id
         })
 
         if (!website) {
