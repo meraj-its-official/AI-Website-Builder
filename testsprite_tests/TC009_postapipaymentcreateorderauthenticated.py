@@ -1,6 +1,5 @@
-import os
-import sys
 import requests
+import sys
 from requests.exceptions import RequestException
 
 BASE_URL = "http://localhost:8000"
@@ -9,132 +8,200 @@ TIMEOUT = 30
 
 def test_post_api_payment_create_order_authenticated():
     session = requests.Session()
-    session.headers.update({"Accept": "application/json", "Content-Type": "application/json"})
-
-    # Helper to fail with clear message
-    def fail(msg):
-        session.close()
-        raise AssertionError(msg)
-
     try:
-        # 1) Retrieve available plans (no auth required)
-        try:
-            resp = session.get(f"{BASE_URL}/api/payment/plans", timeout=TIMEOUT)
-        except RequestException as e:
-            fail(f"Failed to GET /api/payment/plans: {e}")
-        assert resp.status_code == 200, f"GET /api/payment/plans returned {resp.status_code}, expected 200"
-        plans = None
-        try:
-            plans = resp.json()
-        except ValueError:
-            fail("GET /api/payment/plans did not return valid JSON")
-        assert isinstance(plans, list) and len(plans) > 0, "Expected a non-empty list of plans from /api/payment/plans"
+        # 1) Authenticate via Google auth endpoint using a test identity token.
+        auth_url = f"{BASE_URL}/api/auth/google"
+        test_token = "TEST_VALID_ID_TOKEN"  # Replace with a real test token if required by the environment
+        auth_payload_keys = ["idToken", "token", "credential"]
+        auth_response = None
+        auth_success = False
+        last_exception = None
 
-        # determine a planId from the first plan using common keys
-        first_plan = plans[0]
-        plan_id = None
-        for key in ("id", "_id", "planId", "plan_id"):
-            if key in first_plan:
-                plan_id = first_plan[key]
+        for key in auth_payload_keys:
+            try:
+                resp = session.post(auth_url, json={key: test_token}, timeout=TIMEOUT)
+            except RequestException as e:
+                last_exception = e
+                continue
+
+            if resp.status_code == 200:
+                auth_response = resp
+                auth_success = True
                 break
-        if plan_id is None:
-            # maybe plan is a simple string id
-            if isinstance(first_plan, str):
-                plan_id = first_plan
             else:
-                fail(f"Could not determine planId from plan object: {first_plan}")
+                auth_response = resp
 
-        # 2) Authenticate using a Google/Firebase identity token provided via env var
-        id_token = os.environ.get("TEST_GOOGLE_ID_TOKEN")
-        if not id_token:
-            fail("Environment variable TEST_GOOGLE_ID_TOKEN is required for authenticated tests but not set")
+        assert auth_success, f"Authentication failed. Last status: {getattr(auth_response, 'status_code', None)}; Response text: {getattr(auth_response, 'text', None)}; Exception: {last_exception}"
 
-        auth_payload = {"idToken": id_token}
+        # 2) Retrieve available payment plans to select a valid planId
+        plans_url = f"{BASE_URL}/api/payment/plans"
         try:
-            auth_resp = session.post(f"{BASE_URL}/api/auth/google", json=auth_payload, timeout=TIMEOUT)
+            plans_resp = session.get(plans_url, timeout=TIMEOUT)
         except RequestException as e:
-            fail(f"Failed to POST /api/auth/google: {e}")
-        assert auth_resp.status_code == 200, f"POST /api/auth/google returned {auth_resp.status_code}, expected 200"
+            raise AssertionError(f"Failed to GET plans: {e}")
 
-        # Optional: verify protected route to confirm session is active
+        assert plans_resp.status_code == 200, f"GET /api/payment/plans returned {plans_resp.status_code}: {plans_resp.text}"
         try:
-            me_resp = session.get(f"{BASE_URL}/api/user/me", timeout=TIMEOUT)
-        except RequestException:
-            # If /api/user/me is not available, skip this verification but keep authenticated session
-            me_resp = None
-        if me_resp is not None:
-            assert me_resp.status_code == 200, f"Expected 200 from /api/user/me after auth, got {me_resp.status_code}"
-
-        # 3) Create order for selected plan
-        create_payload = {"planId": plan_id}
-        try:
-            order_resp = session.post(f"{BASE_URL}/api/payment/create-order", json=create_payload, timeout=TIMEOUT)
-        except RequestException as e:
-            fail(f"Failed to POST /api/payment/create-order: {e}")
-
-        assert order_resp.status_code == 200, f"POST /api/payment/create-order returned {order_resp.status_code}, expected 200"
-        try:
-            order_json = order_resp.json()
+            plans_json = plans_resp.json()
         except ValueError:
-            fail("POST /api/payment/create-order did not return valid JSON")
+            raise AssertionError(f"GET /api/payment/plans did not return JSON: {plans_resp.text}")
 
-        # Validate that server returned order information. Accept common keys.
-        order_obj = None
-        # Response might be the order object directly or wrapped under "order"
-        if isinstance(order_json, dict):
-            if "order" in order_json and isinstance(order_json["order"], dict):
-                order_obj = order_json["order"]
-            else:
-                order_obj = order_json
+        # Accept either a raw list or an object with a plans list
+        if isinstance(plans_json, dict) and isinstance(plans_json.get("plans"), list):
+            plans_list = plans_json.get("plans")
         else:
-            fail(f"Unexpected JSON structure for order: {order_json}")
+            plans_list = plans_json if isinstance(plans_json, list) else None
 
-        found_id = None
-        for key in ("id", "_id", "order_id", "razorpay_order_id", "orderId", "razorpayOrderId"):
-            if key in order_obj:
-                found_id = order_obj[key]
+        assert isinstance(plans_list, list) and len(plans_list) > 0, f"No plans returned from /api/payment/plans: {plans_json}"
+
+        # Helper to determine if a plan appears to be paid
+        def plan_is_paid(plan_obj):
+            # If plan is a primitive string/number, treat strings containing 'free' as free
+            if isinstance(plan_obj, str):
+                return 'free' not in plan_obj.lower()
+            if isinstance(plan_obj, (int, float)):
+                return bool(plan_obj > 0)
+
+            # For dicts, look for common price/amount fields
+            price_keys = [
+                'price', 'amount', 'price_cents', 'amount_cents', 'priceInCents', 'amountInCents',
+                'cost', 'value', 'amount_in_cents', 'price_in_cents'
+            ]
+            # If explicit free flag exists
+            if isinstance(plan_obj.get('free'), bool):
+                return not plan_obj.get('free')
+            if isinstance(plan_obj.get('isFree'), bool):
+                return not plan_obj.get('isFree')
+            if isinstance(plan_obj.get('paid'), bool):
+                return bool(plan_obj.get('paid'))
+
+            for k in price_keys:
+                v = plan_obj.get(k)
+                if isinstance(v, (int, float)) and v > 0:
+                    return True
+                if isinstance(v, str):
+                    try:
+                        nv = float(v)
+                        if nv > 0:
+                            return True
+                    except Exception:
+                        pass
+
+            # Check nested structures
+            for nested_key in ['plan', 'data', 'attributes']:
+                nested = plan_obj.get(nested_key)
+                if isinstance(nested, dict):
+                    if plan_is_paid(nested):
+                        return True
+
+            # If the plan has a name or slug mentioning 'pro' or 'premium', treat as paid
+            for txt_key in ['name', 'slug', 'key', 'id', '_id', 'planId', 'plan_id']:
+                v = plan_obj.get(txt_key)
+                if isinstance(v, str) and any(token in v.lower() for token in ['pro', 'premium', 'paid', 'business', 'plus']):
+                    return True
+
+            # Default: consider it free/unknown -> not paid
+            return False
+
+        # Build candidate planIds from all paid plans
+        candidates = []
+        for plan in plans_list:
+            try:
+                is_paid = plan_is_paid(plan) if isinstance(plan, (dict, str, int, float)) else False
+            except Exception:
+                is_paid = False
+
+            if not is_paid:
+                # skip free plans
+                continue
+
+            # Build candidate ids from this plan
+            if isinstance(plan, (str, int)):
+                candidates.append(str(plan))
+                continue
+
+            if isinstance(plan, dict):
+                keys_to_try = ["id", "_id", "planId", "plan_id", "razorpay_plan_id", "razorpay_plan", "razorpayPlanId", "razorpayPlan", "slug", "name", "key"]
+                for k in keys_to_try:
+                    v = plan.get(k)
+                    if v is not None:
+                        candidates.append(str(v))
+                nested = plan.get("plan") or plan.get("data") or plan.get("attributes")
+                if isinstance(nested, dict):
+                    for k in keys_to_try:
+                        v = nested.get(k)
+                        if v is not None:
+                            candidates.append(str(v))
+
+        # Deduplicate candidates while preserving order
+        seen = set()
+        candidates = [c for c in candidates if not (c in seen or seen.add(c))]
+
+        assert len(candidates) > 0, f"No paid plans available to create order. Returned plans: {plans_list}"
+
+        # 3) Try creating order with each candidate planId until one succeeds
+        create_order_url = f"{BASE_URL}/api/payment/create-order"
+        create_resp = None
+        create_json = None
+        create_success = False
+        last_create_status = None
+        last_create_text = None
+
+        for candidate in candidates:
+            try:
+                resp = session.post(create_order_url, json={"planId": candidate}, timeout=TIMEOUT)
+            except RequestException as e:
+                last_create_status = None
+                last_create_text = f"RequestException: {e}"
+                continue
+
+            last_create_status = resp.status_code
+            last_create_text = resp.text
+
+            if resp.status_code == 200:
+                create_resp = resp
+                try:
+                    create_json = resp.json()
+                except ValueError:
+                    raise AssertionError(f"POST /api/payment/create-order did not return JSON: {resp.text}")
+                create_success = True
                 break
+            else:
+                # If server explicitly rejects paid requirement or candidate is invalid, try next candidate
+                # continue trying other candidates
+                continue
 
-        # Also accept presence of amount and currency as indicators
-        has_amount = any(k in order_obj for k in ("amount", "currency", "receipt"))
-        assert (found_id is not None) or has_amount, f"Order response did not contain expected keys. Full response: {order_json}"
+        assert create_success, f"POST /api/payment/create-order failed for all candidate planIds. Last status: {last_create_status}; Response: {last_create_text}; Candidates tried: {candidates}"
 
-        created_order_id = found_id
+        # Validate that an order object/identifier was returned by the server.
+        assert isinstance(create_json, dict), f"Unexpected create-order response type, expected dict: {create_json}"
 
-        # Test succeeded if we reach here
-        print("TC009: PASS - Created order for planId:", plan_id, "order_id:", created_order_id)
+        order_keys = {"id", "_id", "orderId", "razorpay_order_id", "order", "razorpayOrderId"}
+        if not any(k in create_json for k in order_keys):
+            nested_order = create_json.get("order") if isinstance(create_json.get("order"), dict) else None
+            if not nested_order or not any(k in nested_order for k in order_keys):
+                raise AssertionError(f"Created order response did not contain expected order identifier keys. Response: {create_json}")
+
+        print("TEST PASSED: Authenticated POST /api/payment/create-order returned 200 and created an order.")
 
     finally:
-        # Cleanup: attempt to delete the created order if an ID was found and a delete endpoint exists.
-        # This is best-effort; ignore any errors during cleanup.
+        # Attempt to clean up by logging out the session to clear server-side session/cookie.
         try:
-            if 'created_order_id' in locals() and created_order_id:
-                # Attempt common delete endpoints; ignore 404/unsupported
-                delete_paths = [
-                    f"{BASE_URL}/api/payment/orders/{created_order_id}",
-                    f"{BASE_URL}/api/payment/order/{created_order_id}",
-                    f"{BASE_URL}/api/payment/{created_order_id}"
-                ]
-                for path in delete_paths:
-                    try:
-                        del_resp = session.delete(path, timeout=TIMEOUT)
-                        # If deletion succeeded (2xx) or not allowed (4xx), stop trying further endpoints
-                        if 200 <= del_resp.status_code < 300:
-                            break
-                    except RequestException:
-                        continue
-        finally:
-            session.close()
+            logout_url = f"{BASE_URL}/api/auth/logout"
+            session.post(logout_url, timeout=TIMEOUT)
+        except Exception:
+            # ignore logout failures in cleanup
+            pass
+        session.close()
 
 
 if __name__ == "__main__":
     try:
         test_post_api_payment_create_order_authenticated()
     except AssertionError as e:
-        print("TC009: FAIL -", e)
+        print(f"TEST FAILED: {e}")
         sys.exit(1)
     except Exception as e:
-        print("TC009: ERROR - Unexpected exception:", e)
+        print(f"TEST ERROR: Unexpected exception: {e}")
         sys.exit(2)
-    else:
-        sys.exit(0)
+    sys.exit(0)

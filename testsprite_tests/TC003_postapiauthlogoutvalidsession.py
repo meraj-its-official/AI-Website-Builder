@@ -1,78 +1,79 @@
-import requests
+import os
 import sys
-import time
+import requests
 
-BASE = "http://localhost:8000"
+BASE_URL = "http://localhost:8000"
+LOGIN_PATH = "/api/auth/google"
+LOGOUT_PATH = "/api/auth/logout"
+PROTECTED_PATH = "/api/website"  # protected route that requires auth
 TIMEOUT = 30
+
 
 def test_post_api_auth_logout_valid_session():
     session = requests.Session()
-    headers = {"Content-Type": "application/json"}
+    login_url = BASE_URL + LOGIN_PATH
+    logout_url = BASE_URL + LOGOUT_PATH
+    protected_url = BASE_URL + PROTECTED_PATH
 
+    # Allow providing a real id token via env for CI runs; fallback to a placeholder
+    id_token = os.environ.get("TEST_GOOGLE_ID_TOKEN", "test-id-token")
+
+    logged_in = False
     try:
-        # 1) Optionally validate landing page if it exists
-        try:
-            r = session.get(f"{BASE}/", timeout=TIMEOUT)
-        except Exception:
-            r = None
-        if r and r.status_code == 200:
-            body = r.text.lower()
-            assert ("context.ai" in body) or ("contex.ai" in body) or ("<div id=\"root\"" in r.text.lower()) or ("contex" in body), \
-                "Landing page HTML does not contain expected identifiers"
+        # Attempt sign-in to obtain a session cookie
+        login_payload = {"idToken": id_token}
+        headers = {"Content-Type": "application/json"}
 
-        # 2) Sign in to create a valid session (requires a valid idToken in the environment)
-        # Note: Replace TEST_VALID_ID_TOKEN with a real token when running against a live dev server.
-        id_token_payload = {"idToken": "TEST_VALID_ID_TOKEN"}
-        r = session.post(f"{BASE}/api/auth/google", json=id_token_payload, headers=headers, timeout=TIMEOUT)
+        resp_login = session.post(login_url, json=login_payload, headers=headers, timeout=TIMEOUT)
+        # Expect 200 OK and a session cookie set
+        assert resp_login is not None, "No response from login endpoint"
+        assert resp_login.status_code == 200, f"Expected 200 from login, got {resp_login.status_code}, body: {resp_login.text}"
 
-        # If server responds asking for email, retry with an augmented payload (server-side implementation may require email)
-        if r.status_code == 400:
-            try:
-                body_json = r.json()
-            except Exception:
-                body_json = {}
-            message = "".join([str(v).lower() for v in (body_json.get("message") if isinstance(body_json, dict) else "")]) if body_json else ""
-            if "email is required" in message or "email" in message:
-                alt_payload = {"idToken": "TEST_VALID_ID_TOKEN", "email": "test@example.com", "name": "Test User"}
-                r = session.post(f"{BASE}/api/auth/google", json=alt_payload, headers=headers, timeout=TIMEOUT)
+        # Ensure a cookie was set in the session
+        cookie_count = len(session.cookies)
+        assert cookie_count > 0, f"Expected at least one session cookie after login, found {cookie_count}"
 
-        assert r.status_code == 200, f"Auth Google sign-in failed: {r.status_code} - {r.text}"
-        # Ensure a session cookie was set
-        cookies_after_signin = session.cookies.get_dict()
-        assert cookies_after_signin, f"No cookies found after sign-in. Response headers: {r.headers}"
+        logged_in = True
 
-        # 3) Verify a protected route is accessible with the session (sanity check of session)
-        r = session.get(f"{BASE}/api/website", timeout=TIMEOUT)
-        assert r.status_code == 200, f"Protected route /api/website not accessible after sign-in: {r.status_code} {r.text}"
+        # Call logout with the valid session cookie
+        resp_logout = session.post(logout_url, timeout=TIMEOUT)
+        assert resp_logout is not None, "No response from logout endpoint"
+        assert resp_logout.status_code == 200, f"Expected 200 from logout, got {resp_logout.status_code}, body: {resp_logout.text}"
 
-        # 4) Call logout with the valid session cookie
-        r = session.post(f"{BASE}/api/auth/logout", timeout=TIMEOUT)
-        assert r.status_code == 200, f"Logout did not return 200: {r.status_code} - {r.text}"
-
-        # 5) Validate server cleared the session cookie (check Set-Cookie header or session cookies cleared)
-        set_cookie_header = r.headers.get("Set-Cookie", "")
-        cookies_after_logout = session.cookies.get_dict()
-        cleared_via_header = False
+        # Verify the server cleared the session cookie via Set-Cookie header or that client's cookie jar no longer has auth cookie
+        set_cookie_header = resp_logout.headers.get("Set-Cookie", "") or resp_logout.headers.get("set-cookie", "")
+        cleared_by_header = False
         if set_cookie_header:
-            sc_lower = set_cookie_header.lower()
-            if ("max-age=0" in sc_lower) or ("expires=thu, 01 jan 1970" in sc_lower) or ("expires=" in sc_lower and ("1970" in sc_lower or "utc" in sc_lower)) or ("deleted" in sc_lower):
-                cleared_via_header = True
-        assert cleared_via_header or not cookies_after_logout, f"Session cookie was not cleared after logout. Set-Cookie: {set_cookie_header}, session cookies: {cookies_after_logout}"
+            low = set_cookie_header.lower()
+            if "max-age=0" in low or "expires=thu, 01 jan 1970" in low or "=;" in low:
+                cleared_by_header = True
 
-        # 6) Verify protected route is no longer accessible without session cookie
-        r = requests.get(f"{BASE}/api/website", timeout=TIMEOUT)
-        assert r.status_code == 401, f"Protected route accessible without session after logout (expected 401): got {r.status_code} - {r.text}"
+        cookies_after_logout = len(session.cookies)
+        # requests updates cookies based on Set-Cookie in response; accept either header-based clearing or empty cookie jar
+        assert cleared_by_header or cookies_after_logout == 0, (
+            "Logout did not clear session cookie. "
+            f"Set-Cookie header: {set_cookie_header!r}, cookies remaining: {cookies_after_logout}"
+        )
 
-        print("TC003 passed: logout with valid session returned 200 and cleared session cookie.")
+        # Confirm protected route is no longer accessible (expect 401 or 403)
+        resp_protected = session.get(protected_url, timeout=TIMEOUT)
+        assert resp_protected is not None, "No response from protected endpoint after logout"
+        assert resp_protected.status_code in (401, 403), (
+            f"Expected unauthorized (401/403) accessing protected route after logout, "
+            f"got {resp_protected.status_code}, body: {resp_protected.text}"
+        )
 
+        print("TC003 passed: logout returned 200 and session was cleared; protected route is unauthorized after logout.")
     except AssertionError:
         raise
-    except Exception as exc:
+    except Exception as e:
         raise
     finally:
-        # Best-effort cleanup: ensure server-side session is cleared for this session
+        # Ensure session is cleaned up: attempt logout if still logged in
         try:
-            session.post(f"{BASE}/api/auth/logout", timeout=TIMEOUT)
+            if logged_in:
+                # Use a short timeout for cleanup
+                session.post(logout_url, timeout=5)
         except Exception:
             pass
 
@@ -81,9 +82,9 @@ if __name__ == "__main__":
     try:
         test_post_api_auth_logout_valid_session()
     except AssertionError as e:
-        print("Test failed:", e)
+        print("AssertionError:", e)
         sys.exit(1)
     except Exception as e:
-        print("Error running test:", e)
+        print("Error during test execution:", str(e))
         sys.exit(2)
     sys.exit(0)

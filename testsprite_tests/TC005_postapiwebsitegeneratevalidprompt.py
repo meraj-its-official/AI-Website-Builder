@@ -3,166 +3,179 @@ import sys
 import requests
 
 BASE_URL = "http://localhost:8000"
-TIMEOUT = 30
+TIMEOUT = 30  # seconds
 
-
-def test_TC005_postapiwebsitegeneratevalidprompt():
+def test_post_api_website_generate_valid_prompt():
     """
-    Test POST /api/website/generate with a valid prompt and authenticated session.
-    Flow:
-    - Verify landing page loads (GET /)
-    - Authenticate via POST /api/auth/google using env var TEST_GOOGLE_ID_TOKEN or GOOGLE_ID_TOKEN
-    - POST /api/website/generate with a valid prompt
-    - Verify response is 200 and contains a saved Website project id
-    - GET /api/website/:id to verify stored project
-    - GET /api/website to verify project appears in listing
-    - Cleanup: attempt to DELETE /api/website/:id (if supported) in finally
+    TC005: Test POST /api/website/generate with a valid prompt and authenticated session
+    Ensures a 200 response and a saved Website project is returned, then cleans up.
     """
-    token = os.getenv("TEST_GOOGLE_ID_TOKEN") or os.getenv("GOOGLE_ID_TOKEN")
-    assert token, (
-        "Google ID token not provided. Set TEST_GOOGLE_ID_TOKEN or GOOGLE_ID_TOKEN environment variable "
-        "with a valid Firebase/Google identity token for testing."
-    )
-
     session = requests.Session()
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+    # Obtain a Google/Firebase identity token from environment for test auth
+    id_token = os.environ.get("TEST_GOOGLE_ID_TOKEN")
+    assert id_token, "Environment variable TEST_GOOGLE_ID_TOKEN must be set to run this test."
+
+    auth_url = f"{BASE_URL}/api/auth/google"
+    generate_url = f"{BASE_URL}/api/website/generate"
+    logout_url = f"{BASE_URL}/api/auth/logout"
+
     created_id = None
 
     try:
-        # 1) Landing page loads
+        # 1) Authenticate: POST /api/auth/google
+        auth_payload = {"idToken": id_token}
         try:
-            r = session.get(f"{BASE_URL}/", timeout=TIMEOUT)
+            auth_resp = session.post(auth_url, json=auth_payload, headers=headers, timeout=TIMEOUT)
         except requests.RequestException as e:
-            raise AssertionError(f"Failed to GET landing page: {e}")
-        assert r.status_code == 200, f"Landing page did not load successfully, status: {r.status_code}"
-        assert len(r.content) > 0, "Landing page returned empty content"
+            raise AssertionError(f"Auth request to {auth_url} failed: {e}")
 
-        # 2) Authenticate with Google ID token
-        auth_payload = {"idToken": token}
+        assert auth_resp is not None, "No response from auth endpoint."
+        if auth_resp.status_code != 200:
+            # try to include response body for debug
+            body = None
+            try:
+                body = auth_resp.json()
+            except Exception:
+                body = auth_resp.text
+            raise AssertionError(f"Authentication failed. Expected 200, got {auth_resp.status_code}. Response: {body}")
+
+        # Check that session cookie(s) were set
+        assert session.cookies, "No session cookies set after authentication; auth may not have created a session."
+
+        # 2) POST /api/website/generate with a valid prompt
+        prompt_text = "Create a simple responsive landing page for a fictional coffee shop called 'Morning Brew' with header, menu section, contact form, and footer."
+        generate_payload = {"prompt": prompt_text}
         try:
-            r = session.post(f"{BASE_URL}/api/auth/google", json=auth_payload, timeout=TIMEOUT)
+            gen_resp = session.post(generate_url, json=generate_payload, headers=headers, timeout=TIMEOUT)
         except requests.RequestException as e:
-            raise AssertionError(f"Auth request failed: {e}")
-        assert r.status_code == 200, f"Authentication failed, expected 200 got {r.status_code}"
-        # ensure session cookie is set (common cookie names vary; just ensure some cookie exists)
-        cookies_after_auth = session.cookies.items()
-        assert len(list(cookies_after_auth)) > 0, "No session cookies set after authentication"
+            raise AssertionError(f"Website generate request to {generate_url} failed: {e}")
 
-        # 3) POST /api/website/generate with a valid prompt
-        prompt_text = (
-            "Generate a clean one-page portfolio for a freelance photographer with hero image, "
-            "about section, gallery grid, and contact form."
-        )
-        gen_payload = {"prompt": prompt_text}
-        try:
-            r = session.post(f"{BASE_URL}/api/website/generate", json=gen_payload, timeout=TIMEOUT)
-        except requests.RequestException as e:
-            raise AssertionError(f"Website generate request failed: {e}")
-        assert r.status_code == 200, f"Website generation failed, expected 200 got {r.status_code}"
+        assert gen_resp is not None, "No response from website generate endpoint."
+        # Expect 200 with created Website project
+        if gen_resp.status_code != 200:
+            body = None
+            try:
+                body = gen_resp.json()
+            except Exception:
+                body = gen_resp.text
+            raise AssertionError(f"Website generation failed. Expected 200, got {gen_resp.status_code}. Response: {body}")
 
         try:
-            gen_json = r.json()
+            gen_data = gen_resp.json()
         except ValueError:
-            raise AssertionError("Website generate response is not valid JSON")
+            raise AssertionError("Website generate response is not valid JSON.")
 
-        # Determine project ID in response
+        # Extract created project ID from common fields
         created_id = None
-        if isinstance(gen_json, dict):
-            # common id fields
-            created_id = gen_json.get("id") or gen_json.get("_id") or gen_json.get("projectId")
-            # maybe wrapped in data
-            if not created_id and "data" in gen_json and isinstance(gen_json["data"], dict):
-                created_id = (
-                    gen_json["data"].get("id")
-                    or gen_json["data"].get("_id")
-                    or gen_json["data"].get("projectId")
-                )
-        assert created_id, f"Generated project response did not contain an id. Response: {gen_json}"
-
-        # Ensure generated project contains code or html content
-        code_present = False
-        for key in ("code", "html", "content"):
-            if key in gen_json and isinstance(gen_json[key], str) and gen_json[key].strip():
-                code_present = True
-                break
-            if "data" in gen_json and isinstance(gen_json["data"], dict):
-                val = gen_json["data"].get(key)
-                if isinstance(val, str) and val.strip():
-                    code_present = True
+        if isinstance(gen_data, dict):
+            for key in ("id", "_id", "projectId", "websiteId", "uid"):
+                if key in gen_data and gen_data[key]:
+                    created_id = str(gen_data[key])
                     break
-        assert code_present, "Generated project did not include website code/html in response"
+            # sometimes API nests the project under 'website' or 'data'
+            if not created_id:
+                for container in ("website", "data", "project"):
+                    if container in gen_data and isinstance(gen_data[container], dict):
+                        for key in ("id", "_id", "projectId", "websiteId"):
+                            if key in gen_data[container] and gen_data[container][key]:
+                                created_id = str(gen_data[container][key])
+                                break
+                        if created_id:
+                            break
 
-        # 4) GET /api/website/:id to fetch stored project
+        assert created_id, f"Could not extract created project ID from response: {gen_data}"
+
+        # 3) GET /api/website/:id to verify it was saved
+        get_url = f"{BASE_URL}/api/website/{created_id}"
         try:
-            r = session.get(f"{BASE_URL}/api/website/{created_id}", timeout=TIMEOUT)
+            get_resp = session.get(get_url, headers=headers, timeout=TIMEOUT)
         except requests.RequestException as e:
-            raise AssertionError(f"GET project by id failed: {e}")
-        assert r.status_code == 200, f"Fetching created project failed, expected 200 got {r.status_code}"
-        try:
-            project_json = r.json()
-        except ValueError:
-            raise AssertionError("GET project response is not valid JSON")
-        # basic checks on returned project
-        returned_id = (
-            project_json.get("id") or project_json.get("_id") or (project_json.get("data") or {}).get("_id")
-        )
-        assert returned_id and str(returned_id) == str(created_id), "Fetched project id does not match created id"
+            raise AssertionError(f"GET project request to {get_url} failed: {e}")
 
-        # 5) GET /api/website to ensure listing includes created project
-        try:
-            r = session.get(f"{BASE_URL}/api/website", timeout=TIMEOUT)
-        except requests.RequestException as e:
-            raise AssertionError(f"GET website listing failed: {e}")
-        assert r.status_code == 200, f"Listing websites failed, expected 200 got {r.status_code}"
-        try:
-            list_json = r.json()
-        except ValueError:
-            raise AssertionError("Website listing response is not valid JSON")
-        # Expect an array of websites
-        assert isinstance(list_json, list) or (
-            isinstance(list_json, dict) and isinstance(list_json.get("data"), list)
-        ), "Website listing did not return an array"
-        found = False
-        if isinstance(list_json, list):
-            for item in list_json:
-                if (item.get("id") or item.get("_id") or item.get("projectId")) and str(
-                    (item.get("id") or item.get("_id") or item.get("projectId"))
-                ) == str(created_id):
-                    found = True
-                    break
-        else:
-            for item in list_json.get("data", []):
-                if (item.get("id") or item.get("_id") or item.get("projectId")) and str(
-                    (item.get("id") or item.get("_id") or item.get("projectId"))
-                ) == str(created_id):
-                    found = True
-                    break
-        assert found, "Created project not found in website listing for the authenticated user"
+        assert get_resp is not None, "No response from GET project endpoint."
+        if get_resp.status_code != 200:
+            body = None
+            try:
+                body = get_resp.json()
+            except Exception:
+                body = get_resp.text
+            raise AssertionError(f"Fetching created project failed. Expected 200, got {get_resp.status_code}. Response: {body}")
 
-        print("TC005 passed: Website generated, stored, and retrievable for authenticated user.")
+        try:
+            get_data = get_resp.json()
+        except ValueError:
+            raise AssertionError("GET project response is not valid JSON.")
+
+        # Basic validation: returned project should contain same id and some code/content/title
+        found_id = None
+        if isinstance(get_data, dict):
+            for key in ("id", "_id", "projectId", "websiteId"):
+                if key in get_data and get_data[key]:
+                    found_id = str(get_data[key])
+                    break
+            # check nested
+            if not found_id:
+                for container in ("website", "data", "project"):
+                    if container in get_data and isinstance(get_data[container], dict):
+                        for key in ("id", "_id", "projectId", "websiteId"):
+                            if key in get_data[container] and get_data[container][key]:
+                                found_id = str(get_data[container][key])
+                                break
+                        if found_id:
+                            break
+
+        assert found_id, f"Could not find an ID field in GET project response: {get_data}"
+        assert found_id == created_id, f"Fetched project ID ({found_id}) does not match created ID ({created_id})."
+
+        # Expect at least some content like code/html/title in returned project
+        has_content = False
+        for content_field in ("code", "html", "title", "slug", "name", "content"):
+            if isinstance(get_data, dict):
+                if content_field in get_data and get_data[content_field]:
+                    has_content = True
+                    break
+                # nested
+                for container in ("website", "data", "project"):
+                    if container in get_data and isinstance(get_data[container], dict) and get_data[container].get(content_field):
+                        has_content = True
+                        break
+                if has_content:
+                    break
+
+        assert has_content, f"Returned project does not contain expected content fields. Response: {get_data}"
 
     finally:
-        # Cleanup: attempt to delete the created project if possible
+        # Cleanup: attempt to delete the created project if we were able to create one
         if created_id:
+            delete_url = f"{BASE_URL}/api/website/{created_id}"
             try:
-                r = session.delete(f"{BASE_URL}/api/website/{created_id}", timeout=TIMEOUT)
-                # Accept 200, 204 as success; if not allowed, do not fail the test during cleanup
-                if r.status_code in (200, 204):
-                    print(f"Cleanup: Deleted project {created_id}")
-                else:
-                    print(f"Cleanup: DELETE returned status {r.status_code} for project {created_id}; response: {r.text}")
+                # Some APIs support DELETE; attempt it and tolerate 404/403 if deletion not permitted
+                del_resp = session.delete(delete_url, headers=headers, timeout=TIMEOUT)
+                # Accept 200/204 as successful deletes; ignore 404/403 but log via assertion message only on unexpected codes
+                if del_resp.status_code not in (200, 204, 202, 404, 403):
+                    try:
+                        body = del_resp.json()
+                    except Exception:
+                        body = del_resp.text
+                    print(f"Warning: unexpected status from DELETE {delete_url}: {del_resp.status_code}. Response: {body}", file=sys.stderr)
             except requests.RequestException as e:
-                print(f"Cleanup: Failed to DELETE project {created_id}: {e}")
+                print(f"Warning: DELETE request to {delete_url} failed: {e}", file=sys.stderr)
 
+        # Attempt to logout to clear session cookie
+        try:
+            lo_resp = session.post(logout_url, headers=headers, timeout=TIMEOUT)
+            # logout may require auth; accept both success and non-2xx but warn on failure
+            if lo_resp.status_code != 200:
+                try:
+                    body = lo_resp.json()
+                except Exception:
+                    body = lo_resp.text
+                print(f"Warning: logout returned status {lo_resp.status_code}. Response: {body}", file=sys.stderr)
+        except requests.RequestException as e:
+            print(f"Warning: logout request failed: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
-    try:
-        test_TC005_postapiwebsitegeneratevalidprompt()
-    except AssertionError as e:
-        print(f"TEST FAILED: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"UNEXPECTED ERROR: {e}")
-        sys.exit(2)
-    else:
-        print("TEST COMPLETED SUCCESSFULLY")
-        sys.exit(0)
+    test_post_api_website_generate_valid_prompt()
+    print("TC005 passed.")

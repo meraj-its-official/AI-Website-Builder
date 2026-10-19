@@ -1,116 +1,112 @@
-import os
-import time
 import requests
-from requests.exceptions import RequestException
+import sys
+import time
 
-BASE = "http://localhost:8000"
-TIMEOUT = 30
+BASE_URL = "http://localhost:8000"
+TIMEOUT = 30  # seconds
 
-def test_putapiwebsiteidvalidupdate():
+def test_put_api_website_id_valid_update():
     session = requests.Session()
-    session.headers.update({"Accept": "application/json"})
-    website_id = None
+    created_website_id = None
 
-    # 1) Validate landing page loads
+    # Helper to extract id from website object
+    def extract_id(obj):
+        if not isinstance(obj, dict):
+            return None
+        for key in ("_id", "id", "uuid"):
+            if key in obj:
+                return obj[key]
+        # sometimes API nests data
+        if "website" in obj and isinstance(obj["website"], dict):
+            for key in ("_id", "id"):
+                if key in obj["website"]:
+                    return obj["website"][key]
+        return None
+
     try:
-        resp = session.get(f"{BASE}/", timeout=TIMEOUT)
-    except RequestException as e:
-        raise AssertionError(f"Landing page request failed: {e}")
-    assert resp.status_code == 200, f"Landing page did not load (status {resp.status_code})"
-    assert resp.text and len(resp.text) > 0, "Landing page returned empty body"
-
-    # 2) Authenticate: prefer GOOGLE_ID_TOKEN, fallback to providing a session cookie via env
-    id_token = os.environ.get("GOOGLE_ID_TOKEN")
-    session_cookie = os.environ.get("TEST_SESSION_COOKIE")
-    session_cookie_name = os.environ.get("SESSION_COOKIE_NAME", "connect.sid")
-
-    if id_token:
+        # 1) Authenticate - attempt to sign in with a test idToken
+        auth_payload = {"idToken": "TEST_ID_TOKEN"}
+        resp = session.post(f"{BASE_URL}/api/auth/google", json=auth_payload, timeout=TIMEOUT)
+        if resp.status_code != 200:
+            raise AssertionError(f"Auth failed: expected 200, got {resp.status_code}, body: {resp.text}")
+        # session cookie should be set in session automatically
+        # 2) Create a new website resource to update
+        generate_payload = {"prompt": "Test prompt for website update at " + str(int(time.time()))}
+        resp = session.post(f"{BASE_URL}/api/website/generate", json=generate_payload, timeout=TIMEOUT)
+        if resp.status_code != 200:
+            raise AssertionError(f"Website generation failed: expected 200, got {resp.status_code}, body: {resp.text}")
+        created = None
         try:
-            r = session.post(f"{BASE}/api/auth/google", json={"idToken": id_token}, timeout=TIMEOUT)
-        except RequestException as e:
-            raise AssertionError(f"Auth request failed: {e}")
-        assert r.status_code == 200, f"Authentication with GOOGLE_ID_TOKEN failed: {r.status_code} {r.text}"
-    elif session_cookie:
-        # Set provided session cookie into the session for authenticated requests
-        session.cookies.set(session_cookie_name, session_cookie, domain="localhost")
-    else:
-        raise RuntimeError("No authentication provided. Set GOOGLE_ID_TOKEN or TEST_SESSION_COOKIE environment variable.")
+            created = resp.json()
+        except ValueError:
+            raise AssertionError(f"Website generation returned non-JSON: {resp.text}")
+        created_website_id = extract_id(created)
+        if not created_website_id:
+            raise AssertionError(f"Could not determine created website id from response: {created}")
 
-    # 3) Create a new website project to update (POST /api/website/generate)
-    prompt = f"Automated test prompt for TC007 {int(time.time())}"
-    try:
-        r = session.post(f"{BASE}/api/website/generate", json={"prompt": prompt}, timeout=TIMEOUT)
-    except RequestException as e:
-        raise AssertionError(f"Create website request failed: {e}")
-    assert r.status_code == 200, f"Website generation failed: {r.status_code} {r.text}"
-
-    try:
-        created = r.json()
-    except ValueError:
-        raise AssertionError("Website generation response is not valid JSON")
-
-    # Extract website id from common fields
-    website_id = created.get("id") or created.get("_id") or created.get("websiteId")
-    if not website_id:
-        # sometimes payload nested
-        for candidate in ("data", "website", "result"):
-            if isinstance(created.get(candidate), dict):
-                website_id = created[candidate].get("id") or created[candidate].get("_id")
-                if website_id:
-                    break
-    assert website_id, f"Could not determine website id from response: {created}"
-
-    # Keep original code for potential restore
-    original_code = created.get("code", "")
-
-    # 4) Attempt to update with new code via PUT /api/website/:id
-    updated_code = "<!doctype html><html><body><h1>TC007 - Updated</h1><p>Updated by automated test.</p></body></html>"
-    try:
-        put_resp = session.put(f"{BASE}/api/website/{website_id}", json={"code": updated_code}, timeout=TIMEOUT)
-    except RequestException as e:
-        # Ensure cleanup attempt
+        # 3) PUT update the website's code
+        updated_code = "<html><body><h1>Updated by test</h1></body></html>"
+        put_payload = {"code": updated_code}
+        resp = session.put(f"{BASE_URL}/api/website/{created_website_id}", json=put_payload, timeout=TIMEOUT)
+        if resp.status_code != 200:
+            raise AssertionError(f"PUT update failed: expected 200, got {resp.status_code}, body: {resp.text}")
         try:
-            session.delete(f"{BASE}/api/website/{website_id}", timeout=TIMEOUT)
-        except Exception:
-            pass
-        raise AssertionError(f"PUT request failed: {e}")
+            updated_resp = resp.json()
+        except ValueError:
+            raise AssertionError(f"PUT update returned non-JSON: {resp.text}")
 
-    assert put_resp.status_code == 200, f"PUT did not return 200: {put_resp.status_code} {put_resp.text}"
-    try:
-        put_data = put_resp.json()
-    except ValueError:
-        raise AssertionError("PUT response is not valid JSON")
+        # Validate that returned Website data contains the updated code
+        returned_code = None
+        if isinstance(updated_resp, dict):
+            # direct code field
+            returned_code = updated_resp.get("code")
+            # nested
+            if returned_code is None and "website" in updated_resp and isinstance(updated_resp["website"], dict):
+                returned_code = updated_resp["website"].get("code")
+        assert returned_code == updated_code, f"Returned code does not match updated code. expected: {updated_code}, got: {returned_code}, full response: {updated_resp}"
 
-    # Validate that the returned resource reflects the updated code
-    code_in_put = put_data.get("code") or (put_data.get("website") or {}).get("code")
-    assert code_in_put is not None, f"PUT response does not include code field: {put_data}"
-    assert updated_code in code_in_put, "PUT response code does not contain the updated HTML"
+        # 4) GET the website to confirm persisted update
+        resp = session.get(f"{BASE_URL}/api/website/{created_website_id}", timeout=TIMEOUT)
+        if resp.status_code != 200:
+            raise AssertionError(f"GET after update failed: expected 200, got {resp.status_code}, body: {resp.text}")
+        try:
+            get_resp = resp.json()
+        except ValueError:
+            raise AssertionError(f"GET after update returned non-JSON: {resp.text}")
 
-    # 5) GET the website to confirm persisted update
-    try:
-        get_resp = session.get(f"{BASE}/api/website/{website_id}", timeout=TIMEOUT)
-    except RequestException as e:
-        raise AssertionError(f"GET after PUT failed: {e}")
-    assert get_resp.status_code == 200, f"GET after PUT returned {get_resp.status_code}: {get_resp.text}"
-    try:
-        get_data = get_resp.json()
-    except ValueError:
-        raise AssertionError("GET response is not valid JSON")
-    code_in_get = get_data.get("code") or (get_data.get("website") or {}).get("code")
-    assert code_in_get is not None, f"GET response missing code field: {get_data}"
-    assert updated_code in code_in_get, "Persisted code does not match updated code"
+        fetched_code = None
+        if isinstance(get_resp, dict):
+            fetched_code = get_resp.get("code")
+            if fetched_code is None and "website" in get_resp and isinstance(get_resp["website"], dict):
+                fetched_code = get_resp["website"].get("code")
+        assert fetched_code == updated_code, f"Persisted code does not match updated code. expected: {updated_code}, got: {fetched_code}, full response: {get_resp}"
 
-    # 6) Cleanup: attempt to delete the created website (if API supports it). Use finally-like behavior below.
-    try:
-        del_resp = session.delete(f"{BASE}/api/website/{website_id}", timeout=TIMEOUT)
-        # Accept common success codes or not-found (already deleted)
-        if del_resp.status_code not in (200, 204, 404):
-            # Not a hard failure for test, but surface unexpected response
-            raise AssertionError(f"Unexpected delete response status: {del_resp.status_code} {del_resp.text}")
-    except RequestException as e:
-        # Non-fatal cleanup failure
-        print(f"Cleanup DELETE request failed (non-fatal): {e}")
+        print("TC007 passed: PUT /api/website/:id updated and persisted code successfully.")
+
+    finally:
+        # Cleanup: attempt to delete the created website if possible
+        if created_website_id:
+            try:
+                # Try DELETE endpoint if supported
+                resp = session.delete(f"{BASE_URL}/api/website/{created_website_id}", timeout=TIMEOUT)
+                # Accept 200/204/202/404 (404 means already gone)
+                if resp.status_code not in (200, 202, 204, 404):
+                    # If delete not allowed, attempt to revert code to empty as a fallback
+                    try:
+                        revert_payload = {"code": ""}
+                        session.put(f"{BASE_URL}/api/website/{created_website_id}", json=revert_payload, timeout=TIMEOUT)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
 if __name__ == "__main__":
-    test_putapiwebsiteidvalidupdate()
-    print("TC007 completed successfully.")
+    try:
+        test_put_api_website_id_valid_update()
+    except AssertionError as e:
+        print("TC007 failed:", e)
+        sys.exit(1)
+    except Exception as e:
+        print("TC007 encountered an unexpected error:", e)
+        sys.exit(2)
+    sys.exit(0)
