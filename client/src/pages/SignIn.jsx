@@ -17,10 +17,9 @@ function SignIn({ open, onClose }) {
                 name: result.user.displayName,
                 email: result.user.email,
                 avatar: result.user.photoURL
-            }, {
-                withCredentials: true
-            })
-            dispatch(setUserData(data))
+            });
+            localStorage.setItem("token", data.token)
+            dispatch(setUserData(data.user))
             onClose();
         } catch (e) {
             console.error("Auth or Backend error:", e);
