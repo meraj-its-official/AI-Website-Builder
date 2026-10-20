@@ -8,12 +8,12 @@ import cookieParser from "cookie-parser";
 import cors from "cors"
 import websiteRouter from "./routes/website.route.js";
 import paymentRouter from "./routes/payment.route.js";
+import { billingWebhook } from "./controllers/billing.controller.js";
 
 const app = express();
 const port = process.env.PORT || 5000
 app.use(express.json())
 app.use(cookieParser())
-app.use(express.json())
 app.use(cookieParser())
 
 app.use(cors({
@@ -28,7 +28,13 @@ app.use(cors({
     ]
 }));
 
+app.post(
+    "/api/payment/razorpay/webhook",
+    express.raw({ type: "application/json" }),
+    billingWebhook
+);
 
+app.use(express.json())
 app.use("/api/auth", authRouter)
 app.use("/api/user", userRouter)
 app.use("/api/website", websiteRouter)

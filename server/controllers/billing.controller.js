@@ -72,7 +72,7 @@ export const billingVerify = async (req, res) => {
         if (userId && credits) {
             await User.findByIdAndUpdate(userId, {
                 $inc: { credits: Number(credits) },
-                currentPlan: plan,
+                $set: { plan: planConfig.plan },
                 lastPaymentStatus: 'SUCCESS'
             });
             console.log(`Database successfully updated for user ${userId}. Added ${credits} credits.`);
@@ -122,11 +122,11 @@ export const billingWebhook = async (req, res) => {
                 console.log(` Payment Captured! Order ID: ${paymentEntity.order_id}`);
                 console.log(` User Details parsed via notes -> User: ${userId}, Plan: ${plan}, Credits: ${credits}`);
 
-                await User.findByIdAndUpdate(userId, {
-                    $inc: { credits: Number(credits) },
-                    currentPlan: plan,
-                    lastPaymentStatus: 'SUCCESS'
-                });
+                // await User.findByIdAndUpdate(userId, {
+                //     $inc: { credits: Number(credits) },
+                //     plan: plan,
+                //     lastPaymentStatus: 'SUCCESS'
+                // });
 
                 console.log(`Webhook: Database updated successfully for user ${userId}`);
                 break;

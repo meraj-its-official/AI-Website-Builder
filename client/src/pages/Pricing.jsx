@@ -213,7 +213,7 @@ function Pricing() {
                         </div>
                         <div className='flex items-center gap-2 mb-8'>
                             <Coins size={18} className='text-yellow-400' />
-                            <span className='font-semibold'>{p.credits}Credits</span>
+                            <span className='font-semibold'>{p.credits} Credits</span>
                         </div>
                         <ul className='space-y-3 mb-15'>
                             {p.features.map((f) => (
