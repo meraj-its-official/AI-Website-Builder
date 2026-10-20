@@ -1,6 +1,5 @@
 import User from "../models/user.model.js"
 import jwt from "jsonwebtoken"
-import cookieParser from "cookie-parser"
 
 export const googleAuth = async (req, res) => {
     try {
