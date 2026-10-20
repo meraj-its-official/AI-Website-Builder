@@ -1,8 +1,9 @@
 import jwt from "jsonwebtoken"
 import User from "../models/user.model.js"
+import cookieParser from "cookie-parser"
 const isAuth = async (req, res, next) => {
     try {
-        const token = req.cookies.token
+        const token = req.cookie.token
         if (!token) {
             return res.status(400).json({
                 message: "token not found"

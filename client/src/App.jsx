@@ -8,7 +8,9 @@ import Generate from './pages/Generate.jsx'
 import WebsiteEditor from './pages/Editor.jsx'
 import LiveSite from './pages/LiveSite.jsx'
 import Pricing from './pages/Pricing.jsx'
-export const serverUrl = "https://ai-website-builder-88f9.onrender.com"
+export const serverUrl = (
+  import.meta.env.VITE_SERVER_URL || "http://localhost:5000"
+).replace(/\/$/, "");
 
 function App() {
   useGetCurrentUser()

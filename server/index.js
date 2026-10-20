@@ -13,23 +13,21 @@ const app = express();
 const port = process.env.PORT || 5000
 app.use(express.json())
 app.use(cookieParser())
-app.use(cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true
-}))
 
 app.use(cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept"
+    ]
 }));
 
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
-    next();
-});
+app.use(express.json())
+app.use(cookieParser())
 
 
 app.use("/api/auth", authRouter)
