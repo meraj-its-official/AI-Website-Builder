@@ -41,8 +41,8 @@ function Dashboard() {
 
     useEffect(() => {
         const handleGetAllWebsites = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
                 const result = await axios.get(`${serverUrl}/api/website/get-all-items`, { withCredentials: true })
                 setWebsites(result.data || [])
                 setLoading(false)
