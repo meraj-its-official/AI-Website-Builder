@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from "motion/react"
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import SignIn from '../pages/SignIn'
+import SignIn from '../pages/SignIn.jsx'
 import { useDispatch, useSelector } from 'react-redux'
 import { ArrowLeft, Coins, X } from 'lucide-react'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../App.jsx'
 import { setUserData } from '../redux/userSlice'
 
 export const HomeBar = () => {

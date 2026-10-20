@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { useDispatch } from "react-redux"
 import axios from "axios"
-import { serverUrl } from '../App'
+import { serverUrl } from '../App.jsx'
 import { setUserData } from '../redux/userSlice'
 
 function useGetCurrentUser() {
