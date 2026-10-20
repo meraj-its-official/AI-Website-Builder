@@ -1,13 +1,13 @@
 import './App.css'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import Home from './pages/Home'
+import Home from './pages/Home.jsx'
 import useGetCurrentUser from './hooks/useGetCurrentUser'
 import { useSelector } from 'react-redux'
-import Dashboard from './pages/Dashboard'
-import Generate from './pages/Generate'
-import WebsiteEditor from './pages/Editor'
-import LiveSite from './pages/LiveSite'
-import Pricing from './pages/Pricing'
+import Dashboard from './pages/Dashboard.jsx'
+import Generate from './pages/Generate.jsx'
+import WebsiteEditor from './pages/Editor.jsx'
+import LiveSite from './pages/LiveSite.jsx'
+import Pricing from './pages/Pricing.jsx'
 export const serverUrl = "https://ai-website-builder-88f9.onrender.com"
 
 function App() {
