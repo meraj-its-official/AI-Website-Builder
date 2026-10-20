@@ -14,7 +14,7 @@ const port = process.env.PORT || 5000
 app.use(express.json())
 app.use(cookieParser())
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: "https://ai-website-builder-1-6f2j.onrender.com",
     credentials: true
 }))
 
