@@ -62,7 +62,7 @@ function Dashboard() {
             setCopiedId(site._id)
             setTimeout(() => setCopiedId(null), 2000)
         } catch (e) {
-            console.error("Copy failed:", err);
+            console.error("Copy failed:", e);
         }
 
     }
@@ -86,7 +86,7 @@ function Dashboard() {
                     <div className='mt-24 text-center text-zinc-400'>Loading Your Items...</div>
                 )}
 
-                {error && !loading(
+                {error && !loading && (
                     <div className='mt-24 text-center text-red-400'>{error}</div>
                 )}
 
