@@ -2,8 +2,8 @@
 
 > Turn a natural-language website idea into a single-file HTML website, preview it, and refine it with AI.
 
-**Repository:** [meraj-its-official/AI-Website-Builder](https://github.com/meraj-its-official/AI-Website-Builder) 
-**Live Link:** [Build Website Powered by Ai](https://ai-website-builder-1-6f2j.onrender.com)
+**Repository:** [meraj-its-official/AI-Website-Builder](https://github.com/meraj-its-official/AI-Website-Builder) <br/>
+**Live Link:** [Build Website Powered by Ai](https://ai-website-builder-1-6f2j.onrender.com) <br/>
 **Product name in the UI:** ConTex.ai  
 **Project type:** Full-stack AI web application  
 **Documentation status:** Refreshed against the public `main` branch on October 19, 2026.
