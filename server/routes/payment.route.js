@@ -6,6 +6,6 @@ import isAuth from "../middlewares/isAuth.js"
 const paymentRouter = express.Router()
 paymentRouter.post("/orders", isAuth, billingOrders)
 paymentRouter.post("/verify", isAuth, billingVerify)
-paymentRouter.post("/razorpay/webhook", express.raw({ type: "application/json" }), billingWebhook)
+paymentRouter.post("/razorpay/webhook", billingWebhook)
 
 export default paymentRouter

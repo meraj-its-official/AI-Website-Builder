@@ -18,10 +18,19 @@ app.use(cors({
     credentials: true
 }))
 
+app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
+
 app.use((req, res, next) => {
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
     next();
 });
+
 
 app.use("/api/auth", authRouter)
 app.use("/api/user", userRouter)
