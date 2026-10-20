@@ -457,3 +457,5 @@ The owner/product lead should decide these before a public launch:
 ---
 
 **Related document:** [`README.md`](./README.md) for repository setup, environment variables, feature status, and current API paths.
+
+**Developed By** ~ MD MERAJ ALAM.

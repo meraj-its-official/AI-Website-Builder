@@ -347,4 +347,4 @@ Suggested branch naming: `feature/<short-description>`, `fix/<short-description>
 
 The product scope, user stories, acceptance criteria, prioritized roadmap, API baseline, risks, and release gates are documented in [`PRD.md`](./PRD.md).
 
-**DEVELOPED BY** ~ MD MERAJ ALAM
+**Developed By** ~ MD MERAJ ALAM.
