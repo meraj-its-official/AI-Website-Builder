@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { motion } from "motion/react"
 import { Link, useNavigate } from 'react-router-dom'
-import SignIn from './SignIn'
+import SignIn from './SignIn.jsx'
 import { useSelector } from 'react-redux'
-import { HomeBar } from '../components/AppBar'
-import Footer from '../components/Footer'
+import { HomeBar } from '../components/AppBar.jsx'
+import Footer from '../components/Footer.jsx'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../App.jsx'
 
 function Home() {
 

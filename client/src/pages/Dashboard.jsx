@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { DashboardBar } from '../components/AppBar'
+import { DashboardBar } from '../components/AppBar.jsx'
 import { useSelector } from 'react-redux'
 import { motion } from "motion/react"
 import { useNavigate } from 'react-router-dom'
-import Footer from '../components/Footer'
+import Footer from '../components/Footer.jsx'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../App.jsx'
 import { Check, Rocket, Share2 } from 'lucide-react'
 
 function Dashboard() {

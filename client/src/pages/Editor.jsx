@@ -1,8 +1,8 @@
 import axios from 'axios'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { serverUrl } from '../App'
-import { EditorBar } from '../components/AppBar'
+import { serverUrl } from '../App.jsx'
+import { EditorBar } from '../components/AppBar.jsx'
 import { Code2, MessageSquare, Monitor, Rocket, Send, X } from 'lucide-react'
 import { animate, AnimatePresence, motion } from 'motion/react'
 import Editor from '@monaco-editor/react';

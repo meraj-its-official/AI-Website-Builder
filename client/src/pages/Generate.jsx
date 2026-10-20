@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react'
-import { GenerateBar } from '../components/AppBar'
+import { GenerateBar } from '../components/AppBar.jsx'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../App.jsx'
 import { useNavigate } from 'react-router-dom'
 import Footer from '../components/Footer'
 

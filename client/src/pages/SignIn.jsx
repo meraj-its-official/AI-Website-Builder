@@ -2,9 +2,9 @@ import React from 'react'
 import { AnimatePresence, motion } from "motion/react"
 import glogo from "../assets/google-logo.svg"
 import { signInWithPopup } from 'firebase/auth'
-import { auth, provider } from '../authentication/firebase'
+import { auth, provider } from '../authentication/firebase.js'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../App.jsx'
 import { useDispatch } from 'react-redux'
 import { setUserData } from '../redux/userSlice'
 

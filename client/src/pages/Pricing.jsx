@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
-import { serverUrl } from '../App'
+import { serverUrl } from '../App.jsx'
 import axios from 'axios'
-import SignIn from './SignIn'
+import SignIn from './SignIn.jsx'
 
 const plans = [
     {
