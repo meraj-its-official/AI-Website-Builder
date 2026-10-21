@@ -71,7 +71,6 @@ export const billingVerify = async (req, res) => {
 
         if (userId && credits) {
             await User.findByIdAndUpdate(userId, {
-                $inc: { credits: Number(credits) },
                 plan: String(plan),
                 lastPaymentStatus: 'SUCCESS'
             });
