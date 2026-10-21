@@ -155,7 +155,7 @@ function WebsiteEditor() {
                     className={`shrink-0 hidden md:flex w-95 flex-col mr-2 mb-4 rounded-2xl bg-black/80 border-r border-white/10 
                     ${!activeDrag ? 'transition-all duration-75' : ''}`}>
                     <>
-                        <div className='flex-1 px-4 py-4 space-y-4 overflow-y-auto'>
+                        <div className='flex-1 px-4 py-4 space-y-4'>
                             {messages.map((m, i) => (
                                 <div
                                     key={i}
@@ -262,7 +262,7 @@ function WebsiteEditor() {
                             >
                                 <EditorBar onclose={() => setShowChat(false)} />
                                 <>
-                                    <div className='flex-1 px-4 py-4 space-y-4 overflow-y-auto'>
+                                    <div className='flex-1 px-4 py-4 space-y-4'>
                                         {messages.map((m, i) => (
                                             <div
                                                 key={i}
