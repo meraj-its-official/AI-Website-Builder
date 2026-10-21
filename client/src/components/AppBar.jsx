@@ -80,9 +80,9 @@ export const HomeBar = () => {
                                                 </div>
 
                                                 <button className="md:hidden w-full px-4 py-3 flex justify-center cursor-pointer 
-                                                 gap-2 text-sm border-b border-white/10 hover:bg-white/5">
-                                                    <Coins size={14} className="text-yellow-400"
-                                                        onClick={() => navigate('/pricing')} />
+                                                 gap-2 text-sm border-b border-white/10 hover:bg-white/5"
+                                                    onClick={() => navigate('/pricing')}>
+                                                    <Coins size={14} className="text-yellow-400" />
                                                     <span className="text-zinc-300">Credits</span>
                                                     <span className='font-light'>{userData.credits}+</span>
                                                 </button>
