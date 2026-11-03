@@ -35,7 +35,7 @@
 
 const generateResponse = async (prompt) => {
     const geminiApi = process.env.GOOGLE_GEMINI_API_KEY;
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${geminiApi}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiApi}`;
 
     let response = await fetch(geminiUrl, {
         method: "POST",
